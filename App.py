@@ -9,54 +9,670 @@ from PIL import Image
 import base64
 from io import BytesIO
 
-# ============ CONFIG ============
+# ============ PAGE CONFIG ============
 st.set_page_config(
-    page_title="Multi-School Community System",
-    page_icon="🏫",
-    layout="wide"
+    page_title="✨ School Hub & Management ✨",
+    page_icon="🌟",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
+
+# ============ RESPONSIVE DESIGN META TAG ============
+st.markdown("""
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<style>
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .main .block-container {
+            padding: 1rem !important;
+        }
+        h1 { font-size: 2rem !important; }
+        h2 { font-size: 1.5rem !important; }
+        .stButton button { font-size: 1rem !important; padding: 0.5rem 1rem !important; }
+    }
+    
+    /* Sidebar behavior - collapsible on mobile */
+    @media (max-width: 768px) {
+        section[data-testid="stSidebar"] {
+            width: 100% !important;
+            min-width: 100% !important;
+            transform: translateX(-100%) !important;
+            transition: transform 0.3s ease !important;
+        }
+        section[data-testid="stSidebar"][aria-expanded="true"] {
+            transform: translateX(0) !important;
+        }
+        .main .block-container {
+            margin-left: 0 !important;
+            max-width: 100% !important;
+        }
+    }
+    
+    /* Desktop sidebar */
+    @media (min-width: 769px) {
+        section[data-testid="stSidebar"] {
+            width: 350px !important;
+            min-width: 350px !important;
+            transform: translateX(0) !important;
+        }
+        .main .block-container {
+            margin-left: 350px !important;
+            max-width: calc(100% - 350px) !important;
+        }
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ============ KENYAN CURRICULUM DATA ============
+# Primary School (Grade 1-6) - 7 subjects
+PRIMARY_SUBJECTS = [
+    "Mathematics",
+    "English",
+    "Kiswahili",
+    "Science and Technology",
+    "Social Studies",
+    "CRE / IRE / HRE",
+    "Agriculture",
+    "Home Science",
+    "Art and Craft",
+    "Music",
+    "Physical Education"
+]
+
+# Junior Secondary (Grade 7-9) - 12 subjects
+JUNIOR_SECONDARY_SUBJECTS = [
+    "Mathematics",
+    "English",
+    "Kiswahili",
+    "Integrated Science",
+    "Social Studies",
+    "CRE / IRE / HRE",
+    "Business Studies",
+    "Agriculture",
+    "Home Science",
+    "Computer Science",
+    "Pre-Technical Studies",
+    "Visual Arts",
+    "Performing Arts",
+    "Physical Education"
+]
+
+# Senior Secondary (Form 1-4) - 11 subjects (grouped)
+SENIOR_SECONDARY_SUBJECTS = {
+    "Mathematics": ["Mathematics"],
+    "English": ["English"],
+    "Kiswahili": ["Kiswahili"],
+    "Sciences": ["Biology", "Chemistry", "Physics", "General Science"],
+    "Humanities": ["History", "Geography", "CRE", "IRE", "HRE"],
+    "Technical": ["Computer Studies", "Business Studies", "Agriculture", "Home Science"],
+    "Languages": ["French", "German", "Arabic", "Sign Language"]
+}
+
+# Grade/Form list with subject counts
+KENYAN_GRADES = [
+    "Grade 1 (7 subjects)",
+    "Grade 2 (7 subjects)",
+    "Grade 3 (7 subjects)",
+    "Grade 4 (7 subjects)",
+    "Grade 5 (7 subjects)",
+    "Grade 6 (7 subjects)",
+    "Grade 7 (12 subjects)",
+    "Grade 8 (12 subjects)",
+    "Grade 9 (12 subjects)",
+    "Form 1 (11 subjects)",
+    "Form 2 (11 subjects)",
+    "Form 3 (11 subjects)",
+    "Form 4 (11 subjects)"
+]
+
+# ============ FUNCTION TO GET SUBJECTS BASED ON GRADE ============
+def get_subjects_for_grade(grade):
+    """Returns appropriate subjects based on grade level"""
+    if "Grade" in grade and any(str(i) in grade for i in range(1, 7)):
+        return PRIMARY_SUBJECTS
+    elif "Grade" in grade and any(str(i) in grade for i in range(7, 10)):
+        return JUNIOR_SECONDARY_SUBJECTS
+    elif "Form" in grade:
+        # Flatten senior secondary subjects
+        subjects = []
+        for category, subj_list in SENIOR_SECONDARY_SUBJECTS.items():
+            subjects.extend(subj_list)
+        return subjects
+    else:
+        return PRIMARY_SUBJECTS
+
+# ============ FUNCTION TO GET BACKGROUND IMAGE ============
+def get_background_image():
+    """Returns a stunning background image URL"""
+    images = [
+        "https://images.pexels.com/photos/207691/pexels-photo-207691.jpeg?auto=compress&cs=tinysrgb&w=1920",
+        "https://images.pexels.com/photos/256417/pexels-photo-256417.jpeg?auto=compress&cs=tinysrgb&w=1920",
+        "https://images.pexels.com/photos/159844/cellular-education-classroom-159844.jpeg?auto=compress&cs=tinysrgb&w=1920",
+        "https://images.pexels.com/photos/301926/pexels-photo-301926.jpeg?auto=compress&cs=tinysrgb&w=1920",
+        "https://images.pexels.com/photos/5212345/pexels-photo-5212345.jpeg?auto=compress&cs=tinysrgb&w=1920",
+        "https://images.pexels.com/photos/3769714/pexels-photo-3769714.jpeg?auto=compress&cs=tinysrgb&w=1920",
+        "https://images.pexels.com/photos/3769981/pexels-photo-3769981.jpeg?auto=compress&cs=tinysrgb&w=1920",
+        "https://images.pexels.com/photos/3770018/pexels-photo-3770018.jpeg?auto=compress&cs=tinysrgb&w=1920"
+    ]
+    return random.choice(images)
+
+# ============ CUSTOM CSS ============
+BG_IMAGE = get_background_image()
+
+st.markdown(f"""
+<style>
+    /* Import Google Font */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+    
+    * {{
+        font-family: 'Poppins', sans-serif;
+        box-sizing: border-box;
+    }}
+    
+    /* STUNNING BACKGROUND IMAGE */
+    .stApp {{
+        background-image: url('{BG_IMAGE}');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+    }}
+    
+    /* Dark overlay */
+    .stApp::before {{
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, rgba(0,0,0,0.7), rgba(0,0,0,0.5));
+        z-index: 0;
+    }}
+    
+    /* Ensure content above overlay */
+    .main > div, section[data-testid="stSidebar"] {{
+        position: relative;
+        z-index: 2;
+    }}
+    
+    /* ============ TOP NAVIGATION BUTTONS ============ */
+    .top-nav {{
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin: 20px auto;
+        padding: 10px;
+        max-width: 800px;
+        z-index: 10;
+        position: relative;
+    }}
+    
+    .nav-button {{
+        flex: 1;
+        padding: 20px 30px;
+        font-size: 1.5rem !important;
+        font-weight: 900 !important;
+        border: none !important;
+        border-radius: 60px !important;
+        cursor: pointer;
+        transition: all 0.3s ease !important;
+        text-transform: uppercase !important;
+        letter-spacing: 2px !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
+    }}
+    
+    .nav-button.active {{
+        transform: scale(1.05) !important;
+        box-shadow: 0 20px 50px gold !important;
+        border: 4px solid white !important;
+    }}
+    
+    .hub-button {{
+        background: linear-gradient(135deg, #4B0082, #8A2BE2) !important;
+        color: gold !important;
+        border: 4px solid gold !important;
+    }}
+    
+    .hub-button.active {{
+        background: linear-gradient(135deg, gold, #ffd700) !important;
+        color: #4B0082 !important;
+        border: 4px solid white !important;
+    }}
+    
+    .management-button {{
+        background: linear-gradient(135deg, #006400, #228B22) !important;
+        color: #FFD700 !important;
+        border: 4px solid gold !important;
+    }}
+    
+    .management-button.active {{
+        background: linear-gradient(135deg, gold, #ffd700) !important;
+        color: #006400 !important;
+        border: 4px solid white !important;
+    }}
+    
+    /* ============ SIDEBAR ============ */
+    section[data-testid="stSidebar"] {{
+        background: linear-gradient(135deg, rgba(75, 0, 130, 0.98), rgba(138, 43, 226, 0.98), rgba(255, 215, 0, 0.95)) !important;
+        backdrop-filter: blur(15px) !important;
+        border-right: 4px solid gold !important;
+        box-shadow: 10px 0 40px rgba(0, 0, 0, 0.8) !important;
+        overflow-y: auto !important;
+        height: 100vh !important;
+        transition: transform 0.3s ease !important;
+    }}
+    
+    /* Hide collapse button styling */
+    button[data-testid="baseButton-header"] {{
+        display: none !important;
+    }}
+    
+    section[data-testid="stSidebar"] > div {{
+        background: transparent !important;
+        padding: 2rem 1.5rem !important;
+        width: 100% !important;
+    }}
+    
+    /* Sidebar text */
+    section[data-testid="stSidebar"] .stMarkdown,
+    section[data-testid="stSidebar"] .stRadio label,
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] div,
+    section[data-testid="stSidebar"] .st-emotion-cache-16idsys p,
+    section[data-testid="stSidebar"] .st-emotion-cache-1dj0hjr,
+    section[data-testid="stSidebar"] .st-emotion-cache-1v0mbdj {{
+        color: WHITE !important;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.8) !important;
+        font-weight: 700 !important;
+        font-size: 1.1rem !important;
+    }}
+    
+    /* Sidebar radio buttons */
+    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] {{
+        background: rgba(255, 255, 255, 0.2) !important;
+        backdrop-filter: blur(5px) !important;
+        border-radius: 25px !important;
+        padding: 1.2rem !important;
+        border: 3px solid gold !important;
+        margin: 1.5rem 0 !important;
+    }}
+    
+    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label {{
+        background: rgba(0, 0, 0, 0.4) !important;
+        border-radius: 20px !important;
+        padding: 15px 20px !important;
+        margin: 10px 0 !important;
+        border: 2px solid transparent !important;
+        transition: all 0.3s ease !important;
+        color: WHITE !important;
+        font-weight: 700 !important;
+        font-size: 1.2rem !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 15px !important;
+    }}
+    
+    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:hover {{
+        background: rgba(255, 215, 0, 0.4) !important;
+        transform: translateX(10px) !important;
+        border-color: gold !important;
+        box-shadow: 0 5px 20px rgba(255, 215, 0, 0.6) !important;
+    }}
+    
+    section[data-testid="stSidebar"] .stRadio div[role="radiogroup"] label[data-checked="true"] {{
+        background: linear-gradient(135deg, gold, #ffd700) !important;
+        border: 3px solid white !important;
+        box-shadow: 0 0 30px gold !important;
+        color: #4B0082 !important;
+        font-weight: 900 !important;
+    }}
+    
+    /* Sidebar button */
+    section[data-testid="stSidebar"] .stButton button {{
+        background: linear-gradient(135deg, gold, #ffd700) !important;
+        color: #4B0082 !important;
+        border: 4px solid white !important;
+        border-radius: 60px !important;
+        padding: 18px 25px !important;
+        font-weight: 900 !important;
+        font-size: 1.3rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 2px !important;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.5) !important;
+        transition: all 0.3s ease !important;
+        width: 100% !important;
+        margin: 1.5rem 0 !important;
+    }}
+    
+    section[data-testid="stSidebar"] .stButton button:hover {{
+        transform: scale(1.05) !important;
+        box-shadow: 0 15px 40px gold !important;
+        border-color: gold !important;
+    }}
+    
+    /* School header */
+    .school-header {{
+        background: linear-gradient(135deg, rgba(75, 0, 130, 0.95), rgba(138, 43, 226, 0.95));
+        backdrop-filter: blur(10px);
+        border: 5px solid gold;
+        border-radius: 40px;
+        padding: 30px;
+        margin-bottom: 25px;
+        text-align: center;
+        box-shadow: 0 15px 45px rgba(0,0,0,0.6);
+        animation: header-glow 3s infinite;
+    }}
+    
+    @keyframes header-glow {{
+        0%, 100% {{ border-color: gold; box-shadow: 0 0 40px gold; }}
+        50% {{ border-color: white; box-shadow: 0 0 60px white; }}
+    }}
+    
+    .school-header h2 {{
+        color: WHITE !important;
+        text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+        margin: 0;
+        font-size: 2.2rem;
+        font-weight: 900;
+    }}
+    
+    .school-code {{
+        background: rgba(0,0,0,0.5);
+        padding: 15px;
+        border-radius: 50px;
+        margin-top: 15px;
+        border: 3px solid gold;
+    }}
+    
+    .school-code code {{
+        background: transparent !important;
+        color: gold !important;
+        font-size: 1.5rem;
+        font-weight: 800;
+    }}
+    
+    /* Profile card */
+    .profile-card {{
+        background: linear-gradient(135deg, rgba(75, 0, 130, 0.95), rgba(138, 43, 226, 0.95));
+        backdrop-filter: blur(10px);
+        border: 4px solid gold;
+        border-radius: 35px;
+        padding: 25px;
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+    }}
+    
+    .profile-card h1 {{
+        color: WHITE !important;
+        margin: 0;
+        font-size: 4rem;
+    }}
+    
+    /* Main content */
+    .main > div {{
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border-radius: 50px;
+        padding: 2.5rem;
+        margin: 1.5rem;
+        border: 4px solid rgba(255, 215, 0, 0.6);
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+        animation: float 6s ease-in-out infinite;
+    }}
+    
+    @keyframes float {{
+        0%, 100% {{ transform: translateY(0); }}
+        50% {{ transform: translateY(-5px); }}
+    }}
+    
+    /* Headers */
+    h1 {{
+        background: linear-gradient(135deg, gold, #ffd700, #fff5b0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 3.5rem !important;
+        font-weight: 900 !important;
+        text-align: center;
+        animation: title-glow 3s infinite;
+        margin-bottom: 2rem !important;
+    }}
+    
+    @keyframes title-glow {{
+        0%, 100% {{ filter: drop-shadow(0 0 30px gold); }}
+        50% {{ filter: drop-shadow(0 0 50px white); }}
+    }}
+    
+    h2, h3 {{
+        color: WHITE !important;
+        font-weight: 800 !important;
+        text-shadow: 3px 3px 6px rgba(0,0,0,0.6);
+        font-size: 2rem !important;
+    }}
+    
+    /* ============ CHAT STYLES ============ */
+    .chat-container {{
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 30px;
+        padding: 20px;
+        margin: 10px 0;
+        border: 2px solid gold;
+    }}
+    
+    .chat-message {{
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 20px;
+        padding: 15px;
+        margin: 10px 0;
+        border-left: 5px solid gold;
+    }}
+    
+    .chat-message.sent {{
+        border-left-color: #4B0082;
+        background: rgba(75, 0, 130, 0.2);
+    }}
+    
+    .chat-message.received {{
+        border-left-color: gold;
+    }}
+    
+    .chat-sender {{
+        font-weight: 800;
+        color: gold;
+        margin-bottom: 5px;
+    }}
+    
+    .chat-time {{
+        font-size: 0.8rem;
+        color: rgba(255,255,255,0.7);
+        text-align: right;
+        margin-top: 5px;
+    }}
+    
+    /* ============ DROPDOWN STYLES - HIGH CONTRAST ============ */
+    .stSelectbox div[data-baseweb="select"] {{
+        background: #FFFFFF !important;
+        border: 4px solid gold !important;
+        border-radius: 30px !important;
+    }}
+    
+    .stSelectbox div[data-baseweb="select"] span {{
+        color: #000000 !important;
+        font-weight: 700 !important;
+        font-size: 1.2rem !important;
+        background: transparent !important;
+    }}
+    
+    .stSelectbox div[data-baseweb="select"] > div {{
+        background: #FFFFFF !important;
+        color: #000000 !important;
+        font-weight: 700 !important;
+    }}
+    
+    /* Dropdown menu */
+    div[data-baseweb="menu"] {{
+        background: #FFFFFF !important;
+        border: 4px solid gold !important;
+        border-radius: 20px !important;
+    }}
+    
+    div[data-baseweb="menu"] li {{
+        color: #000000 !important;
+        font-weight: 600 !important;
+        background: #FFFFFF !important;
+    }}
+    
+    div[data-baseweb="menu"] li:hover {{
+        background: rgba(255, 215, 0, 0.3) !important;
+    }}
+    
+    div[data-baseweb="menu"] li[aria-selected="true"] {{
+        background: linear-gradient(135deg, gold, #ffd700) !important;
+        color: #4B0082 !important;
+    }}
+    
+    /* Text inputs - HIGH CONTRAST */
+    .stTextInput input, .stTextArea textarea, .stDateInput input {{
+        background: #FFFFFF !important;
+        border: 4px solid gold !important;
+        border-radius: 30px !important;
+        color: #000000 !important;
+        font-weight: 600 !important;
+        font-size: 1.2rem !important;
+        padding: 1rem 1.5rem !important;
+    }}
+    
+    .stTextInput input::placeholder, .stTextArea textarea::placeholder {{
+        color: #666666 !important;
+    }}
+    
+    .stTextInput label, .stTextArea label, .stSelectbox label, .stDateInput label {{
+        color: WHITE !important;
+        font-weight: 800 !important;
+        font-size: 1.2rem !important;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+    }}
+    
+    /* Buttons */
+    .stButton button {{
+        background: linear-gradient(135deg, gold, #ffd700, #fff5b0) !important;
+        color: #4B0082 !important;
+        border: 5px solid white !important;
+        border-radius: 70px !important;
+        padding: 1rem 3rem !important;
+        font-weight: 900 !important;
+        font-size: 1.3rem !important;
+        text-transform: uppercase !important;
+        transition: all 0.3s ease !important;
+    }}
+    
+    .stButton button:hover {{
+        transform: scale(1.05) translateY(-3px) !important;
+        box-shadow: 0 20px 50px gold !important;
+    }}
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {{
+        background: rgba(255, 255, 255, 0.2) !important;
+        backdrop-filter: blur(10px) !important;
+        border-radius: 70px !important;
+        padding: 0.8rem !important;
+        border: 4px solid gold !important;
+        gap: 0.8rem;
+        margin-bottom: 2.5rem !important;
+        flex-wrap: wrap !important;
+    }}
+    
+    .stTabs [data-baseweb="tab"] {{
+        color: WHITE !important;
+        border-radius: 60px !important;
+        padding: 0.8rem 1.5rem !important;
+        font-weight: 700 !important;
+        font-size: 1rem !important;
+        white-space: normal !important;
+    }}
+    
+    .stTabs [aria-selected="true"] {{
+        background: linear-gradient(135deg, gold, #ffd700) !important;
+        color: #4B0082 !important;
+        font-weight: 900 !important;
+    }}
+    
+    /* Metrics */
+    .stMetric {{
+        background: rgba(255, 255, 255, 0.2) !important;
+        backdrop-filter: blur(5px) !important;
+        border: 4px solid gold !important;
+        border-radius: 35px !important;
+        padding: 1.5rem !important;
+    }}
+    
+    .stMetric label {{
+        color: WHITE !important;
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+    }}
+    
+    .stMetric div {{
+        color: gold !important;
+        font-size: 2.5rem !important;
+        font-weight: 900 !important;
+    }}
+    
+    /* Hide footer */
+    footer {{
+        display: none !important;
+    }}
+</style>
+""", unsafe_allow_html=True)
 
 # ============ CODE GENERATOR ============
 def generate_id(prefix, length=8):
-    """Generate unique ID"""
     chars = string.ascii_uppercase + string.digits
     random_part = ''.join(random.choices(chars, k=length))
     return f"{prefix}{random_part}"
 
 def generate_school_code():
-    """Generate unique school code"""
     chars = string.ascii_uppercase + string.digits
     return 'SCH' + ''.join(random.choices(chars, k=6))
 
 def generate_class_code():
-    """Generate class code"""
     return 'CLS' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
 def generate_group_code():
-    """Generate group code"""
     return 'GRP' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+def generate_admission_number():
+    """Generate a unique admission number for students"""
+    year = datetime.now().strftime("%Y")
+    random_num = ''.join(random.choices(string.digits, k=5))
+    return f"ADM/{year}/{random_num}"
 
 # ============ DATA STORAGE ============
 DATA_DIR = Path("school_data")
 DATA_DIR.mkdir(exist_ok=True)
 
-# SCHOOLS FILE - Stores all schools
 SCHOOLS_FILE = DATA_DIR / "all_schools.json"
 
 def load_all_schools():
-    """Load all schools from file"""
     if SCHOOLS_FILE.exists():
         with open(SCHOOLS_FILE, 'r') as f:
             return json.load(f)
     return {}
 
 def save_all_schools(schools):
-    """Save all schools to file"""
     with open(SCHOOLS_FILE, 'w') as f:
         json.dump(schools, f, indent=2)
 
 def load_school_data(school_code, filename, default):
-    """Load data for specific school"""
     if not school_code:
         return default
     filepath = DATA_DIR / f"{school_code}_{filename}"
@@ -69,10 +685,60 @@ def load_school_data(school_code, filename, default):
     return default
 
 def save_school_data(school_code, filename, data):
-    """Save data for specific school"""
     if school_code:
         with open(DATA_DIR / f"{school_code}_{filename}", 'w') as f:
             json.dump(data, f, indent=2)
+
+# ============ CHAT FUNCTIONS ============
+def send_message(users, user_email, recipient_email, message, school_code):
+    """Send a message to another user"""
+    messages = load_school_data(school_code, "messages.json", [])
+    
+    new_message = {
+        "id": generate_id("MSG"),
+        "sender": user_email,
+        "recipient": recipient_email,
+        "message": message,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "read": False,
+        "conversation_id": f"{min(user_email, recipient_email)}_{max(user_email, recipient_email)}"
+    }
+    
+    messages.append(new_message)
+    save_school_data(school_code, "messages.json", messages)
+    return new_message
+
+def get_conversations(user_email, school_code):
+    """Get all conversations for a user"""
+    messages = load_school_data(school_code, "messages.json", [])
+    conversations = {}
+    
+    for msg in messages:
+        if msg['sender'] == user_email or msg['recipient'] == user_email:
+            other = msg['recipient'] if msg['sender'] == user_email else msg['sender']
+            if other not in conversations:
+                conversations[other] = []
+            conversations[other].append(msg)
+    
+    # Sort messages in each conversation by timestamp
+    for conv in conversations:
+        conversations[conv].sort(key=lambda x: x['timestamp'])
+    
+    return conversations
+
+def get_unread_count(user_email, school_code):
+    """Get number of unread messages for a user"""
+    messages = load_school_data(school_code, "messages.json", [])
+    return len([m for m in messages if m['recipient'] == user_email and not m['read']])
+
+def mark_as_read(message_id, school_code):
+    """Mark a message as read"""
+    messages = load_school_data(school_code, "messages.json", [])
+    for msg in messages:
+        if msg['id'] == message_id:
+            msg['read'] = True
+            break
+    save_school_data(school_code, "messages.json", messages)
 
 # ============ SESSION STATE ============
 if 'user' not in st.session_state:
@@ -83,522 +749,518 @@ if 'page' not in st.session_state:
     st.session_state.page = 'welcome'
 if 'menu_index' not in st.session_state:
     st.session_state.menu_index = 0
+if 'chat_with' not in st.session_state:
+    st.session_state.chat_with = None
+if 'app_mode' not in st.session_state:
+    st.session_state.app_mode = 'hub'  # 'hub' or 'management'
 
-# ============ MAIN APP ============
+# ============ TOP NAVIGATION ============
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    st.markdown("""
+    <div class="top-nav">
+        <button class="nav-button hub-button active" onclick="changeMode('hub')">🏫 School Community Hub</button>
+        <button class="nav-button management-button" onclick="changeMode('management')">⚙️ School Management System</button>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Use Streamlit buttons instead of HTML buttons for functionality
+    hub_col, mgmt_col = st.columns(2)
+    with hub_col:
+        if st.button("🏫 School Community Hub", key="hub_btn", use_container_width=True):
+            st.session_state.app_mode = 'hub'
+            st.rerun()
+    with mgmt_col:
+        if st.button("⚙️ School Management System", key="mgmt_btn", use_container_width=True):
+            st.session_state.app_mode = 'management'
+            st.rerun()
 
-# ----- WELCOME PAGE -----
-if st.session_state.page == 'welcome':
-    st.title("🏫 Multi-School Community System")
+st.divider()
+
+# ============ MAIN APP BASED ON MODE ============
+
+# ----- WELCOME PAGE (Only shown when not logged in) -----
+if st.session_state.page == 'welcome' and not st.session_state.user:
     
-    tab1, tab2, tab3, tab4 = st.tabs(["👑 Admin Login", "🏫 Create School", "👨‍🏫 Teacher Login", "👨‍🎓 Student Login"])
+    if st.session_state.app_mode == 'hub':
+        st.markdown('<h1 class="radiant-title">✨ School Community Hub ✨</h1>', unsafe_allow_html=True)
+        st.markdown('<p style="text-align: center; color: white; font-size: 1.5rem;">Connect • Collaborate • Shine Together</p>', unsafe_allow_html=True)
+    else:
+        st.markdown('<h1 class="radiant-title">⚙️ School Management System ⚙️</h1>', unsafe_allow_html=True)
+        st.markdown('<p style="text-align: center; color: white; font-size: 1.5rem;">Manage • Organize • Excel</p>', unsafe_allow_html=True)
     
-    # ---------- TAB 1: ADMIN LOGIN ----------
-    with tab1:
-        st.markdown("""
-        ### 👑 Administrator Login
+    st.divider()
+    
+    if st.session_state.app_mode == 'hub':
+        # HUB MODE - Focus on community and collaboration
+        tab1, tab2, tab3, tab4, tab5 = st.tabs(["👑 Admin", "🏫 Create School", "👨‍🏫 Teachers", "👨‍🎓 Students", "👪 Guardians"])
         
-        Login to manage your existing school.
-        """)
-        
-        col1, col2 = st.columns([1, 1])
-        
-        with col1:
-            with st.form("admin_login_form"):
-                st.markdown("#### 🔐 School Admin Access")
-                
-                school_code = st.text_input("🏫 School Code", placeholder="e.g., SCHABC123", 
-                                          help="Your school's unique code")
-                
-                admin_email = st.text_input("📧 Admin Email", placeholder="admin@school.edu")
-                admin_password = st.text_input("🔐 Password", type="password")
-                
-                if st.form_submit_button("🔑 LOGIN AS ADMIN", use_container_width=True):
-                    if not school_code or not admin_email or not admin_password:
-                        st.error("❌ Please fill all fields")
-                    else:
-                        # Check if school exists
-                        all_schools = load_all_schools()
-                        
-                        if school_code in all_schools:
-                            school = all_schools[school_code]
-                            
-                            # Verify it's the admin
-                            if school['admin_email'] == admin_email:
-                                # Load users
-                                users = load_school_data(school_code, "users.json", [])
-                                
-                                # Find admin user
-                                hashed_pw = hashlib.sha256(admin_password.encode()).hexdigest()
-                                admin_user = None
-                                
-                                for u in users:
-                                    if u['email'] == admin_email and u['password'] == hashed_pw and u['role'] == 'admin':
-                                        admin_user = u
-                                        break
-                                
-                                if admin_user:
-                                    st.session_state.current_school = school
-                                    st.session_state.user = admin_user
-                                    st.session_state.page = 'school_dashboard'
-                                    st.success(f"✅ Welcome back, {admin_user['fullname']}!")
-                                    st.rerun()
-                                else:
-                                    st.error("❌ Invalid admin password")
-                            else:
-                                st.error("❌ This email is not the school administrator")
+        # TAB 1: ADMIN LOGIN
+        with tab1:
+            col1, col2 = st.columns([1,1])
+            with col1:
+                with st.form("admin_login", clear_on_submit=True):
+                    st.subheader("🌟 Admin Login")
+                    school_code = st.text_input("🏫 School Code", placeholder="Enter your school code")
+                    admin_email = st.text_input("📧 Email", placeholder="admin@school.edu")
+                    admin_password = st.text_input("🔐 Password", type="password", placeholder="••••••••")
+                    if st.form_submit_button("✨ LOGIN ✨", use_container_width=True):
+                        if not school_code or not admin_email or not admin_password:
+                            st.error("Please fill all fields")
                         else:
-                            st.error("❌ School not found! Check your school code.")
+                            all_schools = load_all_schools()
+                            if school_code in all_schools:
+                                school = all_schools[school_code]
+                                if school['admin_email'] == admin_email:
+                                    users = load_school_data(school_code, "users.json", [])
+                                    hashed = hashlib.sha256(admin_password.encode()).hexdigest()
+                                    for u in users:
+                                        if u['email'] == admin_email and u['password'] == hashed and u['role'] == 'admin':
+                                            st.session_state.current_school = school
+                                            st.session_state.user = u
+                                            st.session_state.page = 'dashboard'
+                                            st.rerun()
+                                    st.error("Invalid password")
+                                else:
+                                    st.error("Not the admin email")
+                            else:
+                                st.error("School not found")
+            with col2:
+                st.markdown("""
+                <div style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 35px; padding: 30px; text-align: center; border: 4px solid gold;">
+                    <h3 style="color: gold;">👑 Admin Powers</h3>
+                    <p style="color: white; opacity: 0.9;">Full control over your school community</p>
+                    <div style="font-size: 5rem;">✨</div>
+                </div>
+                """, unsafe_allow_html=True)
         
-        with col2:
-            st.markdown("""
-            ### 📋 Admin Access Only
-            
-            This login is for **SCHOOL ADMINISTRATORS** only.
-            
-            **You are the admin if:**
-            - You created the school
-            - You have the admin email
-            - You manage teachers and classes
-            
-            **Don't have a school?**
-            Go to the **Create School** tab to start your own school community.
-            """)
-            
-            st.info("""
-            **Demo Admin Login:**
-            - School Code: Your school code
-            - Email: The email you used to create the school
-            - Password: The password you set
-            """)
-    
-    # ---------- TAB 2: CREATE SCHOOL ----------
-    with tab2:
-        col1, col2 = st.columns([1.5, 1])
-        
-        with col1:
-            st.markdown("""
-            ### 👑 Create New School
-            
-            Start your own school community.
-            You become the **Administrator**.
-            """)
-            
-            with st.form("create_new_school"):
-                school_name = st.text_input("🏫 School Name", placeholder="e.g., Nqatho Sec Sch")
-                admin_fullname = st.text_input("👤 Your Full Name", placeholder="e.g., Wanjiku Edwin Guchu")
-                admin_email = st.text_input("📧 Your Email", placeholder="eddiegucci08@gmail.com")
-                admin_password = st.text_input("🔐 Create Password", type="password")
-                confirm_password = st.text_input("🔐 Confirm Password", type="password")
-                
-                col1_1, col1_2 = st.columns(2)
-                with col1_1:
-                    city = st.text_input("City", placeholder="Nairobi")
-                with col1_2:
-                    state = st.text_input("State/Province", placeholder="Nairobi")
-                
-                school_motto = st.text_input("✨ School Motto", placeholder="DTS")
-                
-                if st.form_submit_button("🚀 CREATE SCHOOL", use_container_width=True):
-                    if not school_name or not admin_email or not admin_password:
-                        st.error("❌ Please fill all required fields")
-                    elif admin_password != confirm_password:
-                        st.error("❌ Passwords do not match")
-                    else:
-                        # Load all schools
-                        all_schools = load_all_schools()
-                        
-                        # Generate unique school code
-                        school_code = generate_school_code()
-                        while school_code in all_schools:
-                            school_code = generate_school_code()
-                        
-                        # Create school
-                        new_school = {
-                            "code": school_code,
-                            "name": school_name,
-                            "city": city,
-                            "state": state,
-                            "motto": school_motto,
-                            "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "created_by": admin_email,
-                            "admin_name": admin_fullname,
-                            "admin_email": admin_email,
-                            "stats": {
-                                "students": 0,
-                                "teachers": 0,
-                                "classes": 0,
-                                "groups": 0,
-                                "pending_requests": 0
+        # TAB 2: CREATE SCHOOL
+        with tab2:
+            col1, col2 = st.columns([1,1])
+            with col1:
+                with st.form("create_school", clear_on_submit=True):
+                    st.subheader("🚀 Start Your Journey")
+                    school_name = st.text_input("🏫 School Name", placeholder="e.g., Nqatho Sec Sch")
+                    admin_name = st.text_input("👤 Your Full Name", placeholder="e.g., Wanjiku Edwin Guchu")
+                    admin_email = st.text_input("📧 Your Email", placeholder="you@school.edu")
+                    password = st.text_input("🔐 Password", type="password", placeholder="Create password")
+                    confirm = st.text_input("🔐 Confirm Password", type="password", placeholder="Confirm password")
+                    city = st.text_input("🏙️ City", placeholder="Nairobi")
+                    state = st.text_input("🗺️ State/Province", placeholder="Nairobi")
+                    motto = st.text_input("✨ School Motto", placeholder="e.g., DTS")
+                    
+                    if st.form_submit_button("🌟 CREATE SCHOOL 🌟", use_container_width=True):
+                        if not school_name or not admin_email or not password:
+                            st.error("Required fields missing")
+                        elif password != confirm:
+                            st.error("Passwords do not match")
+                        else:
+                            all_schools = load_all_schools()
+                            code = generate_school_code()
+                            while code in all_schools:
+                                code = generate_school_code()
+                            
+                            new_school = {
+                                "code": code,
+                                "name": school_name,
+                                "city": city,
+                                "state": state,
+                                "motto": motto,
+                                "created": datetime.now().strftime("%Y-%m-%d"),
+                                "admin_email": admin_email,
+                                "admin_name": admin_name,
+                                "stats": {"students":0, "teachers":0, "guardians":0, "classes":0, "groups":0}
                             }
-                        }
-                        
-                        all_schools[school_code] = new_school
-                        save_all_schools(all_schools)
-                        
-                        # Create admin user
-                        users = [{
-                            "user_id": generate_id("USR"),
-                            "email": admin_email,
-                            "fullname": admin_fullname,
-                            "password": hashlib.sha256(admin_password.encode()).hexdigest(),
-                            "role": "admin",
-                            "title": "School Administrator",
-                            "profile_pic": None,
-                            "bio": "School Founder",
-                            "phone": "",
-                            "joined": datetime.now().strftime("%Y-%m-%d"),
-                            "status": "active",
-                            "school_code": school_code
-                        }]
-                        save_school_data(school_code, "users.json", users)
-                        
-                        # Initialize all school data
-                        save_school_data(school_code, "teachers.json", [])
-                        save_school_data(school_code, "students.json", [])
-                        save_school_data(school_code, "classes.json", [])
-                        save_school_data(school_code, "groups.json", [])
-                        save_school_data(school_code, "announcements.json", [])
-                        save_school_data(school_code, "assignments.json", [])
-                        save_school_data(school_code, "resources.json", [])
-                        save_school_data(school_code, "events.json", [])
-                        save_school_data(school_code, "discussions.json", [])
-                        save_school_data(school_code, "grades.json", [])
-                        save_school_data(school_code, "class_requests.json", [])
-                        save_school_data(school_code, "group_requests.json", [])
-                        
-                        st.session_state.current_school = new_school
-                        st.session_state.user = users[0]
-                        st.session_state.page = 'school_dashboard'
-                        st.success(f"✅ School created! Your school code is: **{school_code}**")
-                        st.rerun()
-        
-        with col2:
-            st.markdown("""
-            ### 📋 Your School Credentials
-            
-            **After creation, you will receive:**
-            
-            ```
-            🔑 SCHOOL CODE: SCH7K9M2B4
-            👑 ADMIN EMAIL: your@email.com
-            ```
-            
-            ### 🎯 Save This Code!
-            
-            You will need your school code to:
-            - Login as admin
-            - Give to teachers
-            - Give to students
-            
-            **Write it down or copy it now!**
-            """)
-    
-    # ---------- TAB 3: TEACHER LOGIN (PERMANENT CUSTOM CODES) ----------
-    with tab3:
-        st.markdown("""
-        ### 👨‍🏫 Teacher Login
-        
-        Enter your **School Code** and **Teacher Code** to access your account.
-        **Teacher codes are created by your admin and NEVER expire.**
-        """)
-        
-        col1, col2 = st.columns([1, 1])
-        
-        with col1:
-            with st.form("teacher_login_form"):
-                st.markdown("#### 🔐 Login with Teacher Code")
-                
-                school_code = st.text_input("🏫 School Code", placeholder="e.g., SCH7K9M2B4", 
-                                          help="Get this from your school administrator")
-                
-                teacher_code = st.text_input("🔑 Teacher Code", placeholder="e.g., MATH-DEPT, FORM1-2024, MR-JOHNSON", 
-                                           help="Your custom teacher code from admin - NEVER EXPIRES")
-                
-                st.markdown("---")
-                st.markdown("#### 👤 Your Information")
-                
-                fullname = st.text_input("📝 Your Full Name", placeholder="e.g., John Smith")
-                email = st.text_input("📧 Your Email", placeholder="teacher@school.edu")
-                password = st.text_input("🔐 Create Password", type="password")
-                confirm_password = st.text_input("🔐 Confirm Password", type="password")
-                
-                submitted = st.form_submit_button("✅ REGISTER AS TEACHER", use_container_width=True)
-                
-                if submitted:
-                    if not school_code or not teacher_code or not fullname or not email or not password:
-                        st.error("❌ Please fill all fields")
-                    elif password != confirm_password:
-                        st.error("❌ Passwords do not match")
-                    else:
-                        # Check if school exists
-                        all_schools = load_all_schools()
-                        
-                        if school_code in all_schools:
-                            school = all_schools[school_code]
-                            
-                            # Load teacher codes for this school
-                            teachers_data = load_school_data(school_code, "teachers.json", [])
-                            
-                            # VERIFY TEACHER CODE - ANY CUSTOM CODE, PERMANENT, NEVER EXPIRES
-                            valid_code = False
-                            teacher_record = None
-                            
-                            for t in teachers_data:
-                                if t['code'] == teacher_code.upper() and t['status'] == 'active':
-                                    valid_code = True
-                                    teacher_record = t
-                                    
-                                    # Initialize used_by_list if not exists
-                                    if 'used_by_list' not in t:
-                                        t['used_by_list'] = []
-                                    
-                                    # Add this teacher to the list of users
-                                    t['used_by_list'].append({
-                                        "email": email,
-                                        "name": fullname,
-                                        "date": datetime.now().strftime("%Y-%m-%d %H:%M")
-                                    })
-                                    
-                                    # Update last used info
-                                    t['last_used'] = datetime.now().strftime("%Y-%m-%d %H:%M")
-                                    t['last_used_by'] = email
-                                    
-                                    # Keep status ACTIVE - never change to used/expired
-                                    t['status'] = 'active'
-                                    break
-                            
-                            if not valid_code:
-                                st.error("❌ Invalid teacher code! Please check with your administrator.")
-                                st.info("💡 Teacher codes are created by your administrator. They can be anything like: MATH-DEPT, FORM1-TEACHERS, MR-JOHNSON, etc.")
-                                st.stop()
-                            
-                            # Load users
-                            users = load_school_data(school_code, "users.json", [])
-                            
-                            # Check if email exists
-                            if any(u['email'] == email for u in users):
-                                st.error("❌ This email is already registered!")
-                                st.stop()
-                            
-                            # Create teacher user
-                            new_user = {
-                                "user_id": generate_id("USR"),
-                                "email": email,
-                                "fullname": fullname,
-                                "password": hashlib.sha256(password.encode()).hexdigest(),
-                                "role": "teacher",
-                                "title": f"Teacher - {teacher_record.get('department', 'General')}",
-                                "profile_pic": None,
-                                "bio": "",
-                                "phone": "",
-                                "joined": datetime.now().strftime("%Y-%m-%d"),
-                                "status": "active",
-                                "school_code": school_code,
-                                "teacher_code_used": teacher_code.upper(),
-                                "classes": [],
-                                "groups": []
-                            }
-                            
-                            users.append(new_user)
-                            save_school_data(school_code, "users.json", users)
-                            save_school_data(school_code, "teachers.json", teachers_data)
-                            
-                            # Update school stats
-                            school['stats']['teachers'] = school['stats'].get('teachers', 0) + 1
-                            all_schools[school_code] = school
+                            all_schools[code] = new_school
                             save_all_schools(all_schools)
                             
-                            st.session_state.current_school = school
-                            st.session_state.user = new_user
-                            st.session_state.page = 'school_dashboard'
-                            st.success(f"✅ Welcome, {fullname}! You are now registered as a teacher.")
-                            st.info("ℹ️ This teacher code is PERMANENT and can be used by other teachers too.")
+                            users = [{
+                                "user_id": generate_id("USR"),
+                                "email": admin_email,
+                                "fullname": admin_name,
+                                "password": hashlib.sha256(password.encode()).hexdigest(),
+                                "role": "admin",
+                                "joined": datetime.now().strftime("%Y-%m-%d"),
+                                "school_code": code
+                            }]
+                            save_school_data(code, "users.json", users)
+                            save_school_data(code, "teachers.json", [])
+                            save_school_data(code, "guardians.json", [])
+                            save_school_data(code, "classes.json", [])
+                            save_school_data(code, "groups.json", [])
+                            save_school_data(code, "announcements.json", [])
+                            save_school_data(code, "assignments.json", [])
+                            save_school_data(code, "resources.json", [])
+                            save_school_data(code, "events.json", [])
+                            save_school_data(code, "discussions.json", [])
+                            save_school_data(code, "grades.json", [])
+                            save_school_data(code, "class_requests.json", [])
+                            save_school_data(code, "group_requests.json", [])
+                            save_school_data(code, "messages.json", [])
+                            
+                            st.session_state.current_school = new_school
+                            st.session_state.user = users[0]
+                            st.session_state.page = 'dashboard'
+                            st.success(f"✨ School Created! Your Code: **{code}**")
                             st.rerun()
-                        else:
-                            st.error("❌ School not found! Check your school code.")
+            with col2:
+                st.markdown("""
+                <div style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 35px; padding: 30px; text-align: center; border: 4px solid gold;">
+                    <h3 style="color: gold;">🎓 Begin Your Legacy</h3>
+                    <p style="color: white; opacity: 0.9;">Create your school and become the founding administrator</p>
+                    <div style="font-size: 5rem;">🚀</div>
+                </div>
+                """, unsafe_allow_html=True)
         
-        with col2:
-            st.markdown("""
-            ### 📋 How to Register as Teacher
+        # TAB 3: TEACHER LOGIN & REGISTER
+        with tab3:
+            subtab1, subtab2 = st.tabs(["🔐 Login", "📝 Register"])
             
-            **1. Get Your Custom Teacher Code**
-            - School administrator gives you a **code they created**
-            - Examples: `MATH-DEPT`, `FORM1-2024`, `MR-JOHNSON`
-            - **Same code works for ALL teachers in your department**
-            
-            **2. Fill the Form**
-            - Enter your school code
-            - Enter your teacher code
-            - Create your account
-            
-            **3. Start Teaching**
-            - Access your classes
-            - Post announcements
-            - Create assignments
-            - Grade students
-            
-            ### ⚠️ Important
-            Teacher codes are **PERMANENT** and **NEVER EXPIRE**.
-            One code can be used by **multiple teachers**.
-            Keep your login credentials safe!
-            """)
-    
-    # ---------- TAB 4: STUDENT LOGIN ----------
-    with tab4:
-        st.markdown("""
-        ### 👨‍🎓 Student Login
-        
-        Enter your **School Code** to join or login.
-        """)
-        
-        col1, col2 = st.columns([1, 1])
-        
-        with col1:
-            tab_login, tab_register = st.tabs(["🔐 Login", "🆕 New Student"])
-            
-            with tab_login:
-                with st.form("student_login_form"):
-                    st.markdown("#### Existing Student Login")
-                    
-                    school_code = st.text_input("🏫 School Code", placeholder="e.g., SCH7K9M2B4", 
-                                              help="Get this from your school administrator", key="student_login_school")
-                    
-                    email = st.text_input("📧 Email", placeholder="student@example.com", key="student_login_email")
-                    password = st.text_input("🔐 Password", type="password", key="student_login_password")
-                    
-                    if st.form_submit_button("🔐 LOGIN", use_container_width=True):
-                        if not school_code or not email or not password:
-                            st.error("❌ Please fill all fields")
-                        else:
-                            # Check if school exists
-                            all_schools = load_all_schools()
-                            
-                            if school_code in all_schools:
-                                school = all_schools[school_code]
-                                
-                                # Load users
-                                users = load_school_data(school_code, "users.json", [])
-                                
-                                # Check credentials
-                                hashed_pw = hashlib.sha256(password.encode()).hexdigest()
-                                found_user = None
-                                
-                                for u in users:
-                                    if u['email'] == email and u['password'] == hashed_pw and u['role'] == 'student':
-                                        found_user = u
-                                        break
-                                
-                                if found_user:
-                                    st.session_state.current_school = school
-                                    st.session_state.user = found_user
-                                    st.session_state.page = 'school_dashboard'
-                                    st.success(f"✅ Welcome back, {found_user['fullname']}!")
-                                    st.rerun()
-                                else:
-                                    st.error("❌ Invalid email or password")
+            with subtab1:
+                col1, col2 = st.columns([1,1])
+                with col1:
+                    with st.form("teacher_login"):
+                        st.subheader("👨‍🏫 Teacher Login")
+                        school_code = st.text_input("🏫 School Code", placeholder="Enter school code")
+                        email = st.text_input("📧 Email", placeholder="teacher@school.edu")
+                        password = st.text_input("🔐 Password", type="password", placeholder="••••••••")
+                        if st.form_submit_button("✨ LOGIN ✨", use_container_width=True):
+                            if not school_code or not email or not password:
+                                st.error("All fields required")
                             else:
-                                st.error("❌ School not found! Check your school code.")
-            
-            with tab_register:
-                with st.form("student_register_form"):
-                    st.markdown("#### New Student Registration")
-                    
-                    school_code = st.text_input("🏫 School Code", placeholder="e.g., SCH7K9M2B4", 
-                                              help="Get this from your school administrator", key="student_register_school")
-                    
-                    st.markdown("---")
-                    st.markdown("#### 👤 Your Information")
-                    
-                    fullname = st.text_input("📝 Your Full Name", placeholder="e.g., John Smith", key="student_reg_name")
-                    email = st.text_input("📧 Your Email", placeholder="student@example.com", key="student_reg_email")
-                    password = st.text_input("🔐 Create Password", type="password", key="student_reg_pass")
-                    confirm_password = st.text_input("🔐 Confirm Password", type="password", key="student_reg_confirm")
-                    
-                    if st.form_submit_button("✅ REGISTER AS STUDENT", use_container_width=True):
-                        if not school_code or not fullname or not email or not password:
-                            st.error("❌ Please fill all fields")
-                        elif password != confirm_password:
-                            st.error("❌ Passwords do not match")
-                        else:
-                            # Check if school exists
-                            all_schools = load_all_schools()
-                            
-                            if school_code in all_schools:
-                                school = all_schools[school_code]
-                                
-                                # Load users
-                                users = load_school_data(school_code, "users.json", [])
-                                
-                                # Check if email exists
-                                if any(u['email'] == email for u in users):
-                                    st.error("❌ This email is already registered!")
+                                all_schools = load_all_schools()
+                                if school_code in all_schools:
+                                    school = all_schools[school_code]
+                                    users = load_school_data(school_code, "users.json", [])
+                                    hashed = hashlib.sha256(password.encode()).hexdigest()
+                                    for u in users:
+                                        if u['email'] == email and u['password'] == hashed and u['role'] == 'teacher':
+                                            st.session_state.current_school = school
+                                            st.session_state.user = u
+                                            st.session_state.page = 'dashboard'
+                                            st.rerun()
+                                    st.error("Invalid credentials")
                                 else:
-                                    # Create student user
+                                    st.error("School not found")
+                with col2:
+                    st.markdown("""
+                    <div style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 35px; padding: 30px; text-align: center; border: 4px solid gold;">
+                        <h3 style="color: gold;">📚 Your Classroom</h3>
+                        <p style="color: white; opacity: 0.9;">Login to manage classes and chat</p>
+                        <div style="font-size: 5rem;">🍎</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            with subtab2:
+                col1, col2 = st.columns([1,1])
+                with col1:
+                    with st.form("teacher_register"):
+                        st.subheader("📝 New Teacher")
+                        school_code = st.text_input("🏫 School Code", key="reg_school")
+                        teacher_code = st.text_input("🔑 Teacher Code", placeholder="e.g., MATH-DEPT")
+                        fullname = st.text_input("👤 Full Name")
+                        email = st.text_input("📧 Email", key="reg_email")
+                        password = st.text_input("🔐 Password", type="password", key="reg_pass")
+                        confirm = st.text_input("🔐 Confirm", type="password", key="reg_confirm")
+                        
+                        if st.form_submit_button("✅ REGISTER", use_container_width=True):
+                            if not all([school_code, teacher_code, fullname, email, password]):
+                                st.error("All fields required")
+                            elif password != confirm:
+                                st.error("Passwords don't match")
+                            else:
+                                all_schools = load_all_schools()
+                                if school_code not in all_schools:
+                                    st.error("School not found")
+                                else:
+                                    school = all_schools[school_code]
+                                    users = load_school_data(school_code, "users.json", [])
+                                    
+                                    # Check if email already exists
+                                    if any(u['email'] == email for u in users):
+                                        st.error("❌ Email already registered!")
+                                        st.stop()
+                                    
+                                    teachers_data = load_school_data(school_code, "teachers.json", [])
+                                    valid = False
+                                    record = None
+                                    for t in teachers_data:
+                                        if t['code'] == teacher_code.upper() and t['status'] == 'active':
+                                            valid = True
+                                            record = t
+                                            t.setdefault('used_by_list', []).append({
+                                                "email": email,
+                                                "name": fullname,
+                                                "date": datetime.now().strftime("%Y-%m-%d %H:%M")
+                                            })
+                                            t['last_used'] = datetime.now().strftime("%Y-%m-%d %H:%M")
+                                            t['last_used_by'] = email
+                                            break
+                                    if not valid:
+                                        st.error("Invalid teacher code")
+                                        st.stop()
+                                    
                                     new_user = {
                                         "user_id": generate_id("USR"),
                                         "email": email,
                                         "fullname": fullname,
                                         "password": hashlib.sha256(password.encode()).hexdigest(),
-                                        "role": "student",
-                                        "profile_pic": None,
-                                        "bio": "",
-                                        "phone": "",
+                                        "role": "teacher",
                                         "joined": datetime.now().strftime("%Y-%m-%d"),
-                                        "status": "active",
                                         "school_code": school_code,
+                                        "teacher_code_used": teacher_code.upper(),
                                         "classes": [],
-                                        "groups": []
+                                        "groups": [],
+                                        "admission_number": None
                                     }
-                                    
                                     users.append(new_user)
                                     save_school_data(school_code, "users.json", users)
-                                    
-                                    # Update school stats
-                                    school['stats']['students'] = school['stats'].get('students', 0) + 1
+                                    save_school_data(school_code, "teachers.json", teachers_data)
+                                    school['stats']['teachers'] += 1
                                     all_schools[school_code] = school
                                     save_all_schools(all_schools)
                                     
                                     st.session_state.current_school = school
                                     st.session_state.user = new_user
-                                    st.session_state.page = 'school_dashboard'
-                                    st.success(f"✅ Welcome, {fullname}! Your account has been created.")
+                                    st.session_state.page = 'dashboard'
+                                    st.success("✅ Registration Successful!")
                                     st.rerun()
-                            else:
-                                st.error("❌ School not found! Check your school code.")
         
-        with col2:
-            st.markdown("""
-            ### 📋 How to Join as Student
+        # TAB 4: STUDENT LOGIN & REGISTER
+        with tab4:
+            subtab1, subtab2 = st.tabs(["🔐 Login", "📝 Register"])
             
-            **1. Get Your School Code**
-            - Ask your teacher or administrator
-            - Format: `SCH7K9M2B4`
+            with subtab1:
+                col1, col2 = st.columns([1,1])
+                with col1:
+                    with st.form("student_login"):
+                        st.subheader("👨‍🎓 Student Login")
+                        school_code = st.text_input("🏫 School Code")
+                        admission_number = st.text_input("🎫 Admission Number")
+                        password = st.text_input("🔐 Password", type="password")
+                        if st.form_submit_button("✨ LOGIN ✨", use_container_width=True):
+                            if not school_code or not admission_number or not password:
+                                st.error("All fields required")
+                            else:
+                                all_schools = load_all_schools()
+                                if school_code in all_schools:
+                                    school = all_schools[school_code]
+                                    users = load_school_data(school_code, "users.json", [])
+                                    hashed = hashlib.sha256(password.encode()).hexdigest()
+                                    for u in users:
+                                        if u['admission_number'] == admission_number and u['password'] == hashed and u['role'] == 'student':
+                                            st.session_state.current_school = school
+                                            st.session_state.user = u
+                                            st.session_state.page = 'dashboard'
+                                            st.rerun()
+                                    st.error("Invalid admission number or password")
+                                else:
+                                    st.error("School not found")
             
-            **2. Choose Your Path**
+            with subtab2:
+                col1, col2 = st.columns([1,1])
+                with col1:
+                    with st.form("student_register"):
+                        st.subheader("📝 New Student")
+                        school_code = st.text_input("🏫 School Code", key="stud_school")
+                        fullname = st.text_input("👤 Full Name")
+                        email = st.text_input("📧 Email (Optional)", help="Optional for students without phones")
+                        password = st.text_input("🔐 Password", type="password", key="stud_pass")
+                        confirm = st.text_input("🔐 Confirm", type="password", key="stud_confirm")
+                        
+                        if st.form_submit_button("✅ REGISTER", use_container_width=True):
+                            if not all([school_code, fullname, password]):
+                                st.error("School code, name and password required")
+                            elif password != confirm:
+                                st.error("Passwords don't match")
+                            else:
+                                all_schools = load_all_schools()
+                                if school_code not in all_schools:
+                                    st.error("School not found")
+                                else:
+                                    school = all_schools[school_code]
+                                    users = load_school_data(school_code, "users.json", [])
+                                    
+                                    # Check if email already exists (if provided)
+                                    if email and any(u['email'] == email for u in users):
+                                        st.error("❌ Email already registered!")
+                                        st.stop()
+                                    
+                                    # Generate unique admission number
+                                    admission_number = generate_admission_number()
+                                    while any(u.get('admission_number') == admission_number for u in users):
+                                        admission_number = generate_admission_number()
+                                    
+                                    new_user = {
+                                        "user_id": generate_id("USR"),
+                                        "email": email if email else "",
+                                        "fullname": fullname,
+                                        "password": hashlib.sha256(password.encode()).hexdigest(),
+                                        "role": "student",
+                                        "joined": datetime.now().strftime("%Y-%m-%d"),
+                                        "school_code": school_code,
+                                        "classes": [],
+                                        "groups": [],
+                                        "admission_number": admission_number,
+                                        "guardians": []  # Store guardian emails
+                                    }
+                                    users.append(new_user)
+                                    save_school_data(school_code, "users.json", users)
+                                    school['stats']['students'] += 1
+                                    all_schools[school_code] = school
+                                    save_all_schools(all_schools)
+                                    
+                                    st.success(f"✅ Registered! Your Admission Number: **{admission_number}**")
+                                    st.info("📝 Save this number - you'll need it to login!")
+        
+        # TAB 5: GUARDIAN LOGIN & REGISTER
+        with tab5:
+            subtab1, subtab2 = st.tabs(["🔐 Login", "📝 Register"])
             
-            **🔐 Existing Student:**
-            - Login with your email and password
+            with subtab1:
+                col1, col2 = st.columns([1,1])
+                with col1:
+                    with st.form("guardian_login"):
+                        st.subheader("👪 Guardian Login")
+                        school_code = st.text_input("🏫 School Code")
+                        student_admission = st.text_input("🎫 Student's Admission Number")
+                        email = st.text_input("📧 Your Email")
+                        password = st.text_input("🔐 Password", type="password")
+                        if st.form_submit_button("✨ LOGIN ✨", use_container_width=True):
+                            if not school_code or not student_admission or not email or not password:
+                                st.error("All fields required")
+                            else:
+                                all_schools = load_all_schools()
+                                if school_code in all_schools:
+                                    school = all_schools[school_code]
+                                    users = load_school_data(school_code, "users.json", [])
+                                    hashed = hashlib.sha256(password.encode()).hexdigest()
+                                    for u in users:
+                                        if u['role'] == 'guardian' and u['email'] == email and u['password'] == hashed:
+                                            # Verify this guardian is linked to the student
+                                            if student_admission in u.get('linked_students', []):
+                                                st.session_state.current_school = school
+                                                st.session_state.user = u
+                                                st.session_state.page = 'dashboard'
+                                                st.rerun()
+                                            else:
+                                                st.error("You are not linked to this student")
+                                                break
+                                    st.error("Invalid credentials")
+                                else:
+                                    st.error("School not found")
             
-            **🆕 New Student:**
-            - Register with your full name
-            - Create your account
-            - Start joining classes!
-            
-            ### 🎯 After Registration
-            
-            - Browse available classes
-            - Request to join classes
-            - Join study groups
-            - View homework and grades
-            """)
+            with subtab2:
+                col1, col2 = st.columns([1,1])
+                with col1:
+                    with st.form("guardian_register"):
+                        st.subheader("📝 New Guardian")
+                        st.info("You'll need the student's admission number to register")
+                        school_code = st.text_input("🏫 School Code", key="guard_school")
+                        student_admission = st.text_input("🎫 Student's Admission Number")
+                        fullname = st.text_input("👤 Your Full Name")
+                        email = st.text_input("📧 Your Email")
+                        phone = st.text_input("📱 Phone Number")
+                        password = st.text_input("🔐 Password", type="password", key="guard_pass")
+                        confirm = st.text_input("🔐 Confirm", type="password", key="guard_confirm")
+                        
+                        if st.form_submit_button("✅ REGISTER", use_container_width=True):
+                            if not all([school_code, student_admission, fullname, email, password]):
+                                st.error("All fields required")
+                            elif password != confirm:
+                                st.error("Passwords don't match")
+                            else:
+                                all_schools = load_all_schools()
+                                if school_code not in all_schools:
+                                    st.error("School not found")
+                                else:
+                                    school = all_schools[school_code]
+                                    users = load_school_data(school_code, "users.json", [])
+                                    
+                                    # Check if email already exists
+                                    if any(u['email'] == email for u in users):
+                                        st.error("❌ Email already registered!")
+                                        st.stop()
+                                    
+                                    # Verify student exists with this admission number
+                                    student = None
+                                    for u in users:
+                                        if u.get('admission_number') == student_admission and u['role'] == 'student':
+                                            student = u
+                                            break
+                                    
+                                    if not student:
+                                        st.error("❌ Student not found with this admission number!")
+                                        st.stop()
+                                    
+                                    # Create guardian
+                                    new_user = {
+                                        "user_id": generate_id("USR"),
+                                        "email": email,
+                                        "fullname": fullname,
+                                        "phone": phone,
+                                        "password": hashlib.sha256(password.encode()).hexdigest(),
+                                        "role": "guardian",
+                                        "joined": datetime.now().strftime("%Y-%m-%d"),
+                                        "school_code": school_code,
+                                        "linked_students": [student_admission],
+                                        "admission_number": None
+                                    }
+                                    users.append(new_user)
+                                    
+                                    # Link guardian to student
+                                    if 'guardians' not in student:
+                                        student['guardians'] = []
+                                    student['guardians'].append(email)
+                                    
+                                    save_school_data(school_code, "users.json", users)
+                                    school['stats']['guardians'] = school['stats'].get('guardians', 0) + 1
+                                    all_schools[school_code] = school
+                                    save_all_schools(all_schools)
+                                    
+                                    st.success("✅ Guardian Registration Successful!")
+                                    st.info("You can now login with your email and the student's admission number")
+    
+    else:  # MANAGEMENT MODE
+        st.markdown("""
+        <div style="text-align: center; padding: 50px;">
+            <h2 style="color: gold;">⚙️ School Management System Coming Soon! ⚙️</h2>
+            <p style="color: white; font-size: 1.2rem;">This module is under development. Features will include:</p>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 30px;">
+                <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 20px; border: 2px solid gold;">
+                    <h3 style="color: gold;">📊 Analytics Dashboard</h3>
+                    <p style="color: white;">Real-time school performance metrics</p>
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 20px; border: 2px solid gold;">
+                    <h3 style="color: gold;">💰 Finance Management</h3>
+                    <p style="color: white;">Fee collection, budgeting, reports</p>
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 20px; border: 2px solid gold;">
+                    <h3 style="color: gold;">📋 Staff Management</h3>
+                    <p style="color: white;">Payroll, attendance, evaluations</p>
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 20px; border: 2px solid gold;">
+                    <h3 style="color: gold;">📚 Curriculum Planning</h3>
+                    <p style="color: white;">Lesson plans, scheme of work</p>
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 20px; border: 2px solid gold;">
+                    <h3 style="color: gold;">📝 Examination Module</h3>
+                    <p style="color: white;">Exam scheduling, results processing</p>
+                </div>
+                <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 20px; border: 2px solid gold;">
+                    <h3 style="color: gold;">🏫 Inventory Management</h3>
+                    <p style="color: white;">Assets, textbooks, equipment</p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-# ----- SCHOOL DASHBOARD -----
-elif st.session_state.page == 'school_dashboard' and st.session_state.current_school and st.session_state.user:
+# ----- DASHBOARD (When logged in) -----
+elif st.session_state.page == 'dashboard' and st.session_state.current_school and st.session_state.user:
     school = st.session_state.current_school
     user = st.session_state.user
     school_code = school['code']
     
-    # Load school data
     users = load_school_data(school_code, "users.json", [])
     teachers_data = load_school_data(school_code, "teachers.json", [])
     classes = load_school_data(school_code, "classes.json", [])
@@ -612,111 +1274,74 @@ elif st.session_state.page == 'school_dashboard' and st.session_state.current_sc
     class_requests = load_school_data(school_code, "class_requests.json", [])
     group_requests = load_school_data(school_code, "group_requests.json", [])
     
+    # Get unread message count
+    unread_count = get_unread_count(user['email'], school_code)
+    
+    # Show mode indicator
+    mode_indicator = "🏫 Community Hub" if st.session_state.app_mode == 'hub' else "⚙️ Management System"
+    st.markdown(f"<p style='text-align: right; color: gold; font-weight: 700;'>{mode_indicator}</p>", unsafe_allow_html=True)
+    
     # ============ SIDEBAR ============
     with st.sidebar:
         st.markdown(f"""
-        # 🏫 {school['name']}
-        *{school.get('motto', 'Learning Together')}*
+        <div class="school-header">
+            <h2>{school['name']}</h2>
+            <p style="color: rgba(255,255,255,0.9); font-style: italic; margin: 5px 0;">✨ {school.get('motto','')} ✨</p>
+            <div class="school-code">
+                <code>{school['code']}</code>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         
-        **School Code:** `{school['code']}`
-        ---
-        """)
-        
-        # User Profile
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            if user.get('profile_pic'):
-                st.image(user['profile_pic'], width=60)
-            else:
-                if user['role'] == 'admin':
-                    st.markdown("# 👑")
-                elif user['role'] == 'teacher':
-                    st.markdown("# 👨‍🏫")
-                else:
-                    st.markdown("# 👨‍🎓")
-        
-        with col2:
-            st.markdown(f"""
-            **{user['fullname']}**
-            `{user['role'].upper()}`
-            {user['email']}
-            """)
-        
-        st.markdown("---")
-        
-        # ============ NAVIGATION MENUS ============
-        
-        # ADMIN MENU - WITH VETO POWER INDICATOR
-        if user['role'] == 'admin':
-            st.markdown("### 👑 ADMIN (Veto Power)")
-            menu_options = [
-                "🏠 Dashboard",
-                "📢 Announcements",
-                "👥 Manage Teachers",
-                "📚 Manage Classes",
-                "👨‍🎓 Manage Students",
-                "👥 Manage Groups",
-                "✅ Approval Requests (Veto)",
-                "🔑 Generate Codes",
-                "📊 Reports",
-                "⚙️ School Settings",
-                "👤 My Profile"
-            ]
-            
-            # Count pending requests
-            pending_count = len([r for r in class_requests if r['status'] == 'pending']) + \
-                          len([r for r in group_requests if r['status'] == 'pending'])
-            if pending_count > 0:
-                menu_options[6] = f"✅ Approval Requests ({pending_count}) - VETO"
-            
-            menu = st.radio("", menu_options, index=st.session_state.menu_index, key="admin_menu")
-        
-        # TEACHER MENU
-        elif user['role'] == 'teacher':
-            menu_options = [
-                "🏠 Dashboard",
-                "📢 My Announcements",
-                "📚 My Classes",
-                "👥 My Groups",
-                "📝 Assignments",
-                "✅ Approve Requests",
-                "📎 Resources",
-                "💬 Discussions",
-                "📊 Grade Book",
-                "👤 My Profile"
-            ]
-            
-            # Count pending requests for teacher
-            my_classes = [c['name'] for c in classes if c.get('teacher') == user['email']]
-            my_groups = [g['name'] for g in groups if g.get('leader') == user['email']]
-            
-            teacher_pending = len([r for r in class_requests if r['status'] == 'pending' and r.get('class_name') in my_classes]) + \
-                            len([r for r in group_requests if r['status'] == 'pending' and r.get('group_name') in my_groups])
-            
-            if teacher_pending > 0:
-                menu_options[5] = f"✅ Approve Requests ({teacher_pending})"
-            
-            menu = st.radio("", menu_options, index=st.session_state.menu_index, key="teacher_menu")
-        
-        # STUDENT MENU
+        st.markdown('<div class="profile-card">', unsafe_allow_html=True)
+        if user.get('profile_pic'):
+            st.image(user['profile_pic'], width=80)
         else:
-            menu_options = [
-                "🏠 Dashboard",
-                "📢 Announcements",
-                "📚 Browse Classes",
-                "👥 Browse Groups",
-                "📝 My Homework",
-                "📎 Study Materials",
-                "💬 Discussion Board",
-                "📊 My Grades",
-                "👤 My Profile"
-            ]
-            menu = st.radio("", menu_options, index=st.session_state.menu_index, key="student_menu")
+            emoji = "👑" if user['role'] == 'admin' else "👨‍🏫" if user['role'] == 'teacher' else "👨‍🎓" if user['role'] == 'student' else "👪"
+            st.markdown(f"<h1 style='font-size: 4rem; margin: 0;'>{emoji}</h1>", unsafe_allow_html=True)
         
-        st.markdown("---")
+        role_display = "ADMIN" if user['role'] == 'admin' else "TEACHER" if user['role'] == 'teacher' else "STUDENT" if user['role'] == 'student' else "GUARDIAN"
         
-        # Logout
-        if st.button("🚪 Logout", use_container_width=True):
+        st.markdown(f"""
+        <div style="color: white; flex: 1;">
+            <strong style="font-size: 1.4rem;">{user['fullname']}</strong><br>
+            <span style="background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 50px; font-size: 0.9rem; font-weight: 700;">{role_display}</span><br>
+            <span style="font-size: 0.9rem; opacity: 0.9;">{user['email'] if user.get('email') else ''}</span>
+            {f"<br><span style='font-size: 0.9rem; color: gold;'>Adm: {user['admission_number']}</span>" if user.get('admission_number') else ''}
+        </div>
+        """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        st.divider()
+        
+        # Navigation based on role and mode
+        if st.session_state.app_mode == 'hub':
+            # HUB MODE - Community focused navigation
+            if user['role'] == 'admin':
+                options = ["Dashboard", "Teachers", "Classes", "Students", "Guardians", "Groups", "Approvals", f"Chat 💬{f' ({unread_count})' if unread_count > 0 else ''}", "Profile"]
+            elif user['role'] == 'teacher':
+                options = ["Dashboard", "My Classes", "My Groups", "Assignments", "Requests", f"Chat 💬{f' ({unread_count})' if unread_count > 0 else ''}", "Profile"]
+            elif user['role'] == 'student':
+                options = ["Dashboard", "Browse Classes", "Browse Groups", "Homework", "My Grades", f"Chat 💬{f' ({unread_count})' if unread_count > 0 else ''}", "Profile"]
+            else:  # guardian
+                options = ["Dashboard", "My Student", "Messages", f"Chat 💬{f' ({unread_count})' if unread_count > 0 else ''}", "Profile"]
+        else:
+            # MANAGEMENT MODE - Administrative focused navigation
+            if user['role'] == 'admin':
+                options = ["Analytics", "Finance", "Staff", "Curriculum", "Exams", "Inventory", "Reports", "Settings"]
+            elif user['role'] == 'teacher':
+                options = ["My Classes", "Gradebook", "Attendance", "Lesson Plans", "Reports", "Settings"]
+            elif user['role'] == 'student':
+                options = ["My Grades", "Attendance", "Timetable", "Fee Statement", "Settings"]
+            else:  # guardian
+                options = ["Student Progress", "Fee Payments", "Reports", "Communications", "Settings"]
+        
+        menu = st.radio("Navigation", options, index=st.session_state.menu_index, label_visibility="collapsed")
+        st.session_state.menu_index = options.index(menu)
+        
+        st.divider()
+        
+        if st.button("🚪 LOGOUT", use_container_width=True):
             st.session_state.user = None
             st.session_state.current_school = None
             st.session_state.page = 'welcome'
@@ -724,451 +1349,247 @@ elif st.session_state.page == 'school_dashboard' and st.session_state.current_sc
     
     # ============ MAIN CONTENT ============
     
-    # ----- ADMIN DASHBOARD (WITH VETO POWER) -----
-    if user['role'] == 'admin':
+    if st.session_state.app_mode == 'hub':
+        # ----- HUB MODE CONTENT (Original functionality) -----
         
-        # ---------- DASHBOARD ----------
-        if menu == "🏠 Dashboard":
-            st.title(f"👑 Admin Dashboard - {school['name']} (Veto Power)")
+        # CHAT SECTION (Common for all roles)
+        if menu.startswith("Chat"):
+            st.markdown("<h1 style='text-align: center;'>💬 Messages</h1>", unsafe_allow_html=True)
             
-            # Key Metrics
-            col1, col2, col3, col4 = st.columns(4)
+            col1, col2 = st.columns([1, 2])
+            
             with col1:
-                st.metric("👨‍🎓 Students", school['stats'].get('students', 0))
-            with col2:
-                st.metric("👨‍🏫 Teachers", school['stats'].get('teachers', 0))
-            with col3:
-                st.metric("📚 Classes", school['stats'].get('classes', 0))
-            with col4:
-                st.metric("👥 Groups", school['stats'].get('groups', 0))
-            
-            st.divider()
-            
-            # Pending Requests
-            col1, col2 = st.columns(2)
-            with col1:
-                st.subheader("✅ Pending Requests")
-                pending_class = [r for r in class_requests if r['status'] == 'pending']
-                pending_group = [r for r in group_requests if r['status'] == 'pending']
+                st.markdown("### 👥 Conversations")
+                conversations = get_conversations(user['email'], school_code)
                 
-                if pending_class or pending_group:
-                    st.warning(f"**{len(pending_class)}** class join requests | **{len(pending_group)}** group join requests")
-                    if st.button("Go to Approval Requests (Veto)"):
-                        st.session_state.menu_index = 6
-                        st.rerun()
-                else:
-                    st.success("No pending requests")
-            
-            with col2:
-                st.subheader("📊 Quick Stats")
-                total_users = len([u for u in users if u['status'] == 'active'])
-                st.metric("Active Users", total_users)
-            
-            st.divider()
-            
-            # Recent Activity
-            st.subheader("📋 Recent Activity")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown("**📢 Latest Announcements**")
-                recent_ann = announcements[-3:] if announcements else []
-                if recent_ann:
-                    for a in reversed(recent_ann):
-                        st.markdown(f"- **{a['title']}** - {a['date'][:10]}")
-                else:
-                    st.info("No announcements yet")
-            
-            with col2:
-                st.markdown("**👥 Recently Joined**")
-                recent_users = [u for u in users if u['joined'] == datetime.now().strftime("%Y-%m-%d")][-3:]
-                if recent_users:
-                    for u in recent_users:
-                        st.markdown(f"- **{u['fullname']}** ({u['role']})")
-                else:
-                    st.info("No new users today")
-        
-        # ---------- ANNOUNCEMENTS ----------
-        elif menu == "📢 Announcements":
-            st.title("📢 School Announcements")
-            
-            col1, col2 = st.columns([1.5, 1])
-            
-            with col1:
-                st.subheader("📝 Create Announcement")
-                with st.form("admin_announcement"):
-                    title = st.text_input("Title")
-                    content = st.text_area("Content", height=150)
-                    
-                    col_a1, col_a2 = st.columns(2)
-                    with col_a1:
-                        audience = st.multiselect(
-                            "Target",
-                            ["All", "Students", "Teachers"],
-                            default=["All"]
-                        )
-                    with col_a2:
-                        important = st.checkbox("⭐ Important")
-                        pinned = st.checkbox("📌 Pin")
-                    
-                    if st.form_submit_button("📢 Post Announcement", use_container_width=True):
-                        if title and content:
-                            new_ann = {
-                                "id": generate_id("ANN"),
-                                "title": title,
-                                "content": content,
-                                "author": user['fullname'],
-                                "author_email": user['email'],
-                                "author_role": "admin",
-                                "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                                "audience": audience,
-                                "important": important,
-                                "pinned": pinned
-                            }
-                            announcements.append(new_ann)
-                            save_school_data(school_code, "announcements.json", announcements)
-                            st.success("✅ Announcement posted!")
-                            st.rerun()
-            
-            with col2:
-                st.subheader("📋 Stats")
-                st.metric("Total Announcements", len(announcements))
-                st.metric("This Month", len([a for a in announcements if a['date'].startswith(datetime.now().strftime("%Y-%m"))]))
-            
-            st.divider()
-            st.subheader("📋 All Announcements")
-            
-            if announcements:
-                for a in reversed(announcements[-20:]):
-                    with st.container(border=True):
-                        col1, col2 = st.columns([3, 1])
-                        with col1:
-                            if a.get('pinned'):
-                                st.markdown(f"📌 **{a['title']}**" + (" ⭐" if a.get('important') else ""))
-                            else:
-                                st.markdown(f"**{a['title']}**" + (" ⭐" if a.get('important') else ""))
-                            st.markdown(a['content'])
-                        with col2:
-                            st.caption(f"By: {a['author']}")
-                            st.caption(f"Date: {a['date'][:16]}")
-                            st.caption(f"Target: {', '.join(a.get('audience', ['All']))}")
+                if conversations:
+                    for other_email, msgs in conversations.items():
+                        # Get other user's name
+                        other_user = next((u for u in users if u['email'] == other_email), None)
+                        if other_user:
+                            other_name = other_user['fullname']
+                            other_role = other_user['role']
                             
-                            if st.button("🗑️", key=f"del_ann_{a['id']}"):
-                                announcements.remove(a)
-                                save_school_data(school_code, "announcements.json", announcements)
+                            # Count unread from this conversation
+                            conv_unread = len([m for m in msgs if m['recipient'] == user['email'] and not m['read']])
+                            
+                            # Get last message time
+                            last_time = msgs[-1]['timestamp'][:16]
+                            
+                            if st.button(f"{'👑 ' if other_role=='admin' else '👨‍🏫 ' if other_role=='teacher' else '👨‍🎓 ' if other_role=='student' else '👪 '}{other_name}{f' ({conv_unread})' if conv_unread > 0 else ''}\n{last_time}", key=f"chat_{other_email}", use_container_width=True):
+                                st.session_state.chat_with = other_email
                                 st.rerun()
-            else:
-                st.info("No announcements yet")
-        
-        # ---------- MANAGE TEACHERS (CUSTOM CODES) ----------
-        elif menu == "👥 Manage Teachers":
-            st.title("👨‍🏫 Teacher Management - CUSTOM CODES")
-            st.success("✅ You can create ANY teacher code you want! Codes are PERMANENT and NEVER expire.")
+                else:
+                    st.info("No conversations yet")
             
-            tab1, tab2, tab3 = st.tabs(["🔑 Create Custom Codes", "✅ Active Teachers", "📋 Code Usage History"])
-            
-            with tab1:
-                st.subheader("🔑 Create Your Own Teacher Codes")
-                st.info("ℹ️ Create ANY code you want. These codes NEVER expire and can be used by MULTIPLE teachers.")
-                
-                col1, col2 = st.columns([1, 1])
-                
-                with col1:
-                    with st.form("create_custom_teacher_code"):
-                        st.markdown("#### ✏️ Create Custom Code")
+            with col2:
+                if st.session_state.chat_with:
+                    other_email = st.session_state.chat_with
+                    other_user = next((u for u in users if u['email'] == other_email), None)
+                    
+                    if other_user:
+                        st.markdown(f"### Chat with {other_user['fullname']}")
                         
-                        code_name = st.text_input("📝 Code Name/Description", placeholder="e.g., Mathematics Department, Form 1 Teachers, John Smith")
-                        custom_code = st.text_input("🔑 Custom Teacher Code", placeholder="e.g., MATH-DEPT, FORM1-2024, MR-JOHNSON",
-                                                  help="Create any code you want! Use letters, numbers, and hyphens.")
+                        # Get conversation
+                        conv_id = f"{min(user['email'], other_email)}_{max(user['email'], other_email)}"
+                        messages = load_school_data(school_code, "messages.json", [])
+                        conv_msgs = [m for m in messages if m['conversation_id'] == conv_id]
+                        conv_msgs.sort(key=lambda x: x['timestamp'])
                         
-                        teacher_department = st.selectbox(
-                            "🏢 Department",
-                            ["Mathematics", "Science", "English", "History", "Computer Science", 
-                             "Physical Education", "Arts", "Administration", "Form 1", "Form 2", 
-                             "Form 3", "Form 4", "Board of Governors", "PTA", "Other"]
-                        )
+                        # Display messages
+                        st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+                        for msg in conv_msgs:
+                            if msg['recipient'] == user['email'] and not msg['read']:
+                                mark_as_read(msg['id'], school_code)
+                            
+                            msg_class = "sent" if msg['sender'] == user['email'] else "received"
+                            st.markdown(f"""
+                            <div class="chat-message {msg_class}">
+                                <div class="chat-sender">{msg['sender'] if msg['sender'] == user['email'] else other_user['fullname']}</div>
+                                <div>{msg['message']}</div>
+                                <div class="chat-time">{msg['timestamp']}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        st.markdown('</div>', unsafe_allow_html=True)
                         
-                        col_btn1, col_btn2 = st.columns(2)
-                        with col_btn1:
-                            submitted = st.form_submit_button("✅ CREATE CUSTOM CODE", use_container_width=True)
-                        
-                        if submitted:
-                            if not code_name:
-                                st.error("❌ Please enter a code name/description")
-                            elif not custom_code:
-                                st.error("❌ Please enter your custom code")
-                            else:
-                                # Check if code already exists
-                                code_exists = False
-                                for t in teachers_data:
-                                    if t['code'] == custom_code.upper():
-                                        code_exists = True
-                                        break
-                                
-                                if code_exists:
-                                    st.error(f"❌ Code '{custom_code.upper()}' already exists! Please choose another one.")
-                                else:
-                                    teachers_data.append({
-                                        "id": generate_id("TCH"),
-                                        "name": code_name,
-                                        "code": custom_code.upper(),
-                                        "department": teacher_department,
-                                        "created": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                                        "created_by": user['email'],
-                                        "status": "active",
-                                        "used_by": None,
-                                        "used_by_name": None,
-                                        "used_by_list": [],
-                                        "is_permanent": True,
-                                        "can_be_reused": True,
-                                        "is_custom": True
-                                    })
-                                    
-                                    save_school_data(school_code, "teachers.json", teachers_data)
-                                    st.success(f"✅ Custom teacher code created: **{custom_code.upper()}**")
-                                    st.info(f"ℹ️ This code is for: {code_name} | Department: {teacher_department}")
-                                    st.balloons()
+                        # Send new message
+                        st.markdown("### 📝 New Message")
+                        with st.form("send_message"):
+                            message = st.text_area("Message", height=100)
+                            if st.form_submit_button("📤 Send", use_container_width=True):
+                                if message:
+                                    send_message(users, user['email'], other_email, message, school_code)
+                                    st.success("Message sent!")
                                     st.rerun()
-                
+                    else:
+                        st.info("Select a conversation to start chatting")
+        
+        # ----- ADMIN SECTION -----
+        elif user['role'] == 'admin':
+            if menu == "Dashboard":
+                st.markdown(f"<h1 style='text-align: center;'>👑 {school['name']} Dashboard</h1>", unsafe_allow_html=True)
+                col1,col2,col3,col4,col5 = st.columns(5)
+                with col1:
+                    st.metric("Students", school['stats'].get('students',0))
                 with col2:
-                    st.markdown("""
-                    ### 📋 Code Creation Examples
-                    
-                    **You can create ANY code like:**
-                    
-                    ```
-                    📌 By Department:
-                    • MATH-DEPT
-                    • SCIENCE-2024
-                    • ENGLISH-TEAM
-                    • KISWAHILI
-                    
-                    📌 By Teacher Name:
-                    • MR-OTIENO
-                    • MS-AKINYI
-                    • DR-ODHIAMBO
-                    • MADAM-JANE
-                    
-                    📌 By Form/Class:
-                    • FORM1-2024
-                    • FORM2-TEACHERS
-                    • FORM4-CLASS
-                    • GRADUATE-2025
-                    
-                    📌 By Role:
-                    • HOD-MATHEMATICS
-                    • SENIOR-TEACHER
-                    • BOARD-MEMBER
-                    • PTA-CHAIR
-                    ```
-                    
-                    ### ✅ Benefits:
-                    - **Easy to remember** - Use department names
-                    - **Share with everyone** - One code for all math teachers
-                    - **Never expires** - Works forever
-                    - **Track usage** - See who used which code
-                    """)
+                    st.metric("Teachers", school['stats'].get('teachers',0))
+                with col3:
+                    st.metric("Guardians", school['stats'].get('guardians',0))
+                with col4:
+                    st.metric("Classes", school['stats'].get('classes',0))
+                with col5:
+                    st.metric("Groups", school['stats'].get('groups',0))
                 
                 st.divider()
                 
-                # Show existing custom codes
-                st.subheader("📋 Your Custom Teacher Codes")
-                custom_codes = [t for t in teachers_data if t.get('is_custom', False) or t['status'] == 'active']
+                pending = len([r for r in class_requests if r['status']=='pending']) + len([r for r in group_requests if r['status']=='pending'])
+                if pending > 0:
+                    st.warning(f"📌 {pending} pending requests await your approval")
+                else:
+                    st.success("✅ All caught up! No pending requests")
+            
+            elif menu == "Teachers":
+                st.markdown("<h1 style='text-align: center;'>👨‍🏫 Teacher Management</h1>", unsafe_allow_html=True)
+                tab1, tab2 = st.tabs(["✨ Create Teacher Code", "👥 Active Teachers"])
                 
-                if custom_codes:
-                    for t in custom_codes:
-                        with st.container(border=True):
-                            col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
-                            with col1:
-                                st.markdown(f"**{t['name']}**")
-                                st.markdown(f"Dept: {t.get('department', 'N/A')}")
-                                if t.get('is_custom'):
-                                    st.markdown("**✨ CUSTOM CODE**")
-                            with col2:
-                                st.code(t['code'], language=None)
-                                st.caption(f"Created: {t['created'][:16]}")
-                            with col3:
-                                used_count = len(t.get('used_by_list', []))
-                                st.markdown(f"**Used by:** {used_count} teacher(s)")
-                                if t.get('used_by_list'):
-                                    last_used = t['used_by_list'][-1]['date'][:16]
-                                    st.caption(f"Last used: {last_used}")
+                with tab1:
+                    with st.form("create_teacher_code"):
+                        name = st.text_input("📝 Code Name/Department", placeholder="e.g., Mathematics Department")
+                        code = st.text_input("🔑 Custom Code", placeholder="e.g., MATH-DEPT, FORM1-2024")
+                        dept = st.selectbox("🏢 Department", ["Mathematics", "Science", "English", "Kiswahili", "History", "Geography", "CRE", "Business", "Computer Science", "Other"])
+                        if st.form_submit_button("✨ Generate Code", use_container_width=True):
+                            if name and code:
+                                if any(t['code'] == code.upper() for t in teachers_data):
+                                    st.error("❌ Code already exists!")
                                 else:
-                                    st.caption("Not used yet")
-                            with col4:
-                                if st.button("🗑️", key=f"del_custom_{t['id']}"):
-                                    teachers_data.remove(t)
+                                    teachers_data.append({
+                                        "id": generate_id("TCH"),
+                                        "name": name,
+                                        "code": code.upper(),
+                                        "department": dept,
+                                        "created": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                                        "created_by": user['email'],
+                                        "status": "active",
+                                        "used_by_list": []
+                                    })
                                     save_school_data(school_code, "teachers.json", teachers_data)
+                                    st.success(f"✅ Code {code.upper()} created successfully!")
                                     st.rerun()
-                else:
-                    st.info("No custom teacher codes created yet. Create your first one above!")
-            
-            with tab2:
-                st.subheader("✅ Active Teachers")
                 
-                active_teachers = [t for t in teachers_data if t['status'] == 'active']
-                teacher_users = [u for u in users if u['role'] == 'teacher']
-                
-                if active_teachers or teacher_users:
-                    # Show teacher codes
-                    for t in active_teachers:
-                        with st.container(border=True):
-                            col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
-                            with col1:
-                                st.markdown(f"**{t['name']}**")
-                                st.markdown(f"Dept: {t.get('department', 'N/A')}")
-                            with col2:
-                                st.markdown(f"**PERMANENT CODE** ✅")
-                                st.markdown(f"Never expires")
-                            with col3:
-                                st.code(t['code'])
+                with tab2:
+                    active_teachers = [t for t in teachers_data if t['status'] == 'active']
+                    if active_teachers:
+                        for t in active_teachers:
+                            with st.expander(f"📌 {t['name']} - `{t['code']}`"):
+                                st.write(f"**Department:** {t['department']}")
+                                st.write(f"**Created:** {t['created']}")
+                                st.write(f"**Used by:** {len(t.get('used_by_list', []))} teachers")
                                 if t.get('used_by_list'):
-                                    st.caption(f"Used by: {len(t['used_by_list'])} teacher(s)")
-                                    if t.get('last_used_by'):
-                                        st.caption(f"Last: {t['last_used_by']}")
-                                else:
-                                    st.caption("Not used yet")
-                            with col4:
-                                if st.button("🗑️", key=f"del_teacher_code_{t['id']}"):
-                                    teachers_data.remove(t)
-                                    save_school_data(school_code, "teachers.json", teachers_data)
-                                    st.rerun()
-                    
-                    # Show teacher users
-                    for u in teacher_users:
-                        if not any(t.get('last_used_by') == u['email'] for t in active_teachers):
-                            with st.container(border=True):
-                                col1, col2, col3 = st.columns([2, 2, 1])
-                                with col1:
-                                    st.markdown(f"**{u['fullname']}**")
-                                    st.markdown(f"📧 {u['email']}")
-                                with col2:
-                                    st.markdown(f"**Joined:** {u['joined']}")
-                                    if u.get('teacher_code_used'):
-                                        st.caption(f"Code: {u['teacher_code_used']}")
-                                with col3:
-                                    if st.button("🗑️", key=f"del_teacher_user_{u['user_id']}"):
-                                        users.remove(u)
-                                        save_school_data(school_code, "users.json", users)
-                                        school['stats']['teachers'] -= 1
-                                        all_schools = load_all_schools()
-                                        all_schools[school_code] = school
-                                        save_all_schools(all_schools)
-                                        st.rerun()
-                else:
-                    st.info("No active teachers yet")
-            
-            with tab3:
-                st.subheader("📋 Teacher Code Usage History")
-                
-                codes_with_usage = [t for t in teachers_data if t.get('used_by_list')]
-                
-                if codes_with_usage:
-                    for t in codes_with_usage:
-                        with st.expander(f"📊 {t['code']} - {t['name']}"):
-                            st.markdown(f"**Department:** {t.get('department', 'N/A')}")
-                            st.markdown(f"**Created:** {t['created']}")
-                            st.markdown(f"**Total Teachers Used:** {len(t.get('used_by_list', []))}")
-                            st.markdown("**Teachers who used this code:**")
-                            for teacher in t.get('used_by_list', []):
-                                st.markdown(f"- **{teacher['name']}** ({teacher['email']}) - {teacher['date']}")
-                else:
-                    st.info("No teacher codes have been used yet")
-        
-        # ---------- MANAGE CLASSES ----------
-        elif menu == "📚 Manage Classes":
-            st.title("📚 Class Management")
-            
-            tab1, tab2 = st.tabs(["➕ Create Class", "📋 All Classes"])
-            
-            with tab1:
-                st.subheader("Create New Class")
-                
-                with st.form("create_class"):
-                    class_name = st.text_input("Class Name", placeholder="e.g., Mathematics 101")
-                    class_subject = st.text_input("Subject", placeholder="Mathematics")
-                    class_grade = st.selectbox("Grade Level", ["9", "10", "11", "12", "College"])
-                    
-                    # Get active teachers
-                    active_teachers_list = []
-                    for t in teachers_data:
-                        if t['status'] == 'active' and t.get('used_by_list'):
-                            for teacher_use in t.get('used_by_list', []):
-                                teacher_email = teacher_use['email']
-                                teacher_user = next((u for u in users if u['email'] == teacher_email), None)
-                                if teacher_user:
-                                    display_name = f"{teacher_user['fullname']} ({teacher_email})"
-                                    active_teachers_list.append({"display": display_name, "email": teacher_email})
-                    
-                    for u in users:
-                        if u['role'] == 'teacher' and not any(t.get('last_used_by') == u['email'] for t in teachers_data):
-                            active_teachers_list.append({"display": f"{u['fullname']} ({u['email']})", "email": u['email']})
-                    
-                    if active_teachers_list:
-                        teacher_options = [t['display'] for t in active_teachers_list]
-                        selected_teacher = st.selectbox("Assign Teacher", teacher_options)
-                        teacher_email = next(t['email'] for t in active_teachers_list if t['display'] == selected_teacher)
-                        teacher_name = selected_teacher.split("(")[0].strip()
+                                    st.write("**Teachers registered with this code:**")
+                                    for teacher in t['used_by_list']:
+                                        st.write(f"- {teacher['name']} ({teacher['email']}) on {teacher['date']}")
                     else:
-                        st.warning("⚠️ No teachers available. Create teacher codes first.")
-                        teacher_email = None
-                        teacher_name = None
-                    
-                    class_room = st.text_input("Room Number", placeholder="201")
-                    class_schedule = st.text_input("Schedule", placeholder="Mon/Wed 10:00 AM")
-                    max_students = st.number_input("Maximum Students", min_value=1, max_value=100, value=30)
-                    
-                    if st.form_submit_button("✅ Create Class", use_container_width=True):
-                        if class_name and teacher_email:
-                            class_code = generate_class_code()
-                            
-                            new_class = {
-                                "id": generate_id("CLS"),
-                                "code": class_code,
-                                "name": class_name,
-                                "subject": class_subject,
-                                "grade": class_grade,
-                                "teacher": teacher_email,
-                                "teacher_name": teacher_name,
-                                "room": class_room,
-                                "schedule": class_schedule,
-                                "max_students": max_students,
-                                "students": [],
-                                "created": datetime.now().strftime("%Y-%m-%d"),
-                                "created_by": user['email'],
-                                "status": "active"
-                            }
-                            
-                            classes.append(new_class)
-                            save_school_data(school_code, "classes.json", classes)
-                            school['stats']['classes'] = school['stats'].get('classes', 0) + 1
-                            
-                            all_schools = load_all_schools()
-                            all_schools[school_code] = school
-                            save_all_schools(all_schools)
-                            
-                            st.success(f"✅ Class created! Code: **{class_code}**")
-                            st.rerun()
+                        st.info("No teacher codes created yet")
             
-            with tab2:
-                st.subheader("All Classes")
-                
-                if classes:
-                    for c in classes:
-                        with st.expander(f"📖 {c['name']} - {c['code']}"):
-                            col1, col2 = st.columns(2)
+            elif menu == "Guardians":
+                st.markdown("<h1 style='text-align: center;'>👪 Guardian Management</h1>", unsafe_allow_html=True)
+                guardians = [u for u in users if u['role'] == 'guardian']
+                if guardians:
+                    for g in guardians:
+                        with st.container():
+                            col1, col2, col3 = st.columns([3, 3, 1])
                             with col1:
-                                st.markdown(f"**Subject:** {c.get('subject', 'N/A')}")
-                                st.markdown(f"**Teacher:** {c.get('teacher_name', c['teacher'])}")
-                                st.markdown(f"**Room:** {c.get('room', 'TBD')}")
+                                st.write(f"**{g['fullname']}**")
                             with col2:
-                                st.markdown(f"**Schedule:** {c.get('schedule', 'TBD')}")
-                                st.markdown(f"**Students:** {len(c.get('students', []))}/{c.get('max_students', 30)}")
-                                st.markdown(f"**Code:** `{c['code']}`")
-                            
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                if st.button("🗑️ Delete Class", key=f"del_class_{c['id']}"):
+                                st.write(f"📧 {g['email']}")
+                                st.write(f"📱 {g.get('phone', 'N/A')}")
+                            with col3:
+                                if st.button("👁️", key=f"view_guard_{g['user_id']}"):
+                                    st.session_state.view_guardian = g
+                                    st.rerun()
+                            if st.session_state.get('view_guardian') == g:
+                                st.write("**Linked Students:**")
+                                for adm in g.get('linked_students', []):
+                                    student = next((u for u in users if u.get('admission_number') == adm), None)
+                                    if student:
+                                        st.write(f"- {student['fullname']} ({adm})")
+                            st.divider()
+                else:
+                    st.info("No guardians registered yet")
+            
+            elif menu == "Classes":
+                st.markdown("<h1 style='text-align: center;'>📚 Class Management</h1>", unsafe_allow_html=True)
+                tab1, tab2 = st.tabs(["➕ Create Class", "📋 All Classes"])
+                
+                with tab1:
+                    with st.form("create_class"):
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            class_name = st.text_input("📝 Class Name", placeholder="e.g., Mathematics 101")
+                            grade = st.selectbox("🎓 Grade/Form", KENYAN_GRADES)
+                            available_subjects = get_subjects_for_grade(grade)
+                            subject = st.selectbox("📚 Main Subject", available_subjects)
+                        
+                        with col2:
+                            class_room = st.text_input("🏫 Room Number", placeholder="e.g., 201")
+                            class_schedule = st.text_input("⏰ Schedule", placeholder="e.g., Mon/Wed 10:00 AM")
+                            max_students = st.number_input("👥 Maximum Students", min_value=1, max_value=100, value=40)
+                        
+                        teacher_options = []
+                        for t in teachers_data:
+                            if t['status'] == 'active' and t.get('used_by_list'):
+                                for teacher_use in t['used_by_list']:
+                                    teacher_options.append(f"{teacher_use['name']} ({teacher_use['email']})")
+                        
+                        if teacher_options:
+                            selected_teacher = st.selectbox("👨‍🏫 Assign Teacher", teacher_options)
+                            teacher_email = selected_teacher.split('(')[1].rstrip(')')
+                            teacher_name = selected_teacher.split('(')[0].strip()
+                        else:
+                            st.warning("⚠️ No teachers available. Create teacher codes first.")
+                            teacher_email = None
+                            teacher_name = None
+                        
+                        if st.form_submit_button("✅ Create Class", use_container_width=True):
+                            if class_name and teacher_email:
+                                class_code = generate_class_code()
+                                classes.append({
+                                    "id": generate_id("CLS"),
+                                    "code": class_code,
+                                    "name": class_name,
+                                    "subject": subject,
+                                    "grade": grade,
+                                    "teacher": teacher_email,
+                                    "teacher_name": teacher_name,
+                                    "room": class_room,
+                                    "schedule": class_schedule,
+                                    "max_students": max_students,
+                                    "students": [],
+                                    "created": datetime.now().strftime("%Y-%m-%d"),
+                                    "status": "active"
+                                })
+                                save_school_data(school_code, "classes.json", classes)
+                                school['stats']['classes'] += 1
+                                all_schools = load_all_schools()
+                                all_schools[school_code] = school
+                                save_all_schools(all_schools)
+                                st.success(f"✅ Class created! Code: {class_code}")
+                                st.rerun()
+                
+                with tab2:
+                    if classes:
+                        for c in classes:
+                            with st.expander(f"📖 {c['name']} - {c['code']} - {c['grade']}"):
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.write(f"**Subject:** {c.get('subject', 'N/A')}")
+                                    st.write(f"**Teacher:** {c.get('teacher_name', c['teacher'])}")
+                                    st.write(f"**Room:** {c.get('room', 'TBD')}")
+                                with col2:
+                                    st.write(f"**Schedule:** {c.get('schedule', 'TBD')}")
+                                    st.write(f"**Students:** {len(c.get('students', []))}/{c.get('max_students', 40)}")
+                                    st.write(f"**Class Code:** `{c['code']}`")
+                                if st.button("🗑️ Delete", key=f"del_class_{c['id']}"):
                                     classes.remove(c)
                                     save_school_data(school_code, "classes.json", classes)
                                     school['stats']['classes'] -= 1
@@ -1176,1415 +1597,426 @@ elif st.session_state.page == 'school_dashboard' and st.session_state.current_sc
                                     all_schools[school_code] = school
                                     save_all_schools(all_schools)
                                     st.rerun()
-                            with col2:
-                                st.markdown(f"**Join Code:** `{c['code']}`")
-                else:
-                    st.info("No classes created yet")
-        
-        # ---------- MANAGE STUDENTS ----------
-        elif menu == "👨‍🎓 Manage Students":
-            st.title("👨‍🎓 Student Management")
+                    else:
+                        st.info("No classes created yet")
             
-            tab1, tab2 = st.tabs(["📋 All Students", "➕ Add Student"])
-            
-            with tab1:
-                st.subheader("All Enrolled Students")
-                
-                student_users = [u for u in users if u['role'] == 'student']
-                
-                if student_users:
-                    for s in student_users:
-                        with st.container(border=True):
+            elif menu == "Students":
+                st.markdown("<h1 style='text-align: center;'>👨‍🎓 Student Management</h1>", unsafe_allow_html=True)
+                students = [u for u in users if u['role'] == 'student']
+                if students:
+                    for s in students:
+                        with st.container():
                             col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
                             with col1:
-                                if s.get('profile_pic'):
-                                    st.image(s['profile_pic'], width=40)
-                                st.markdown(f"**{s['fullname']}**")
+                                st.write(f"**{s['fullname']}**")
                             with col2:
-                                st.markdown(f"📧 {s['email']}")
-                                st.markdown(f"📅 Joined: {s['joined']}")
+                                st.write(f"📧 {s['email'] if s['email'] else 'No email'}")
                             with col3:
-                                # Get student's classes
-                                student_classes = [c['name'] for c in classes if s['email'] in c.get('students', [])]
-                                st.markdown(f"📚 Classes: {len(student_classes)}")
-                                if student_classes:
-                                    st.caption(", ".join(student_classes[:2]))
+                                st.write(f"🎫 {s['admission_number']}")
                             with col4:
                                 if st.button("🗑️", key=f"del_student_{s['user_id']}"):
-                                    # Remove from users
                                     users.remove(s)
                                     save_school_data(school_code, "users.json", users)
-                                    
-                                    # Remove from classes
-                                    for c in classes:
-                                        if s['email'] in c.get('students', []):
-                                            c['students'].remove(s['email'])
-                                    save_school_data(school_code, "classes.json", classes)
-                                    
-                                    # Remove from groups
-                                    for g in groups:
-                                        if s['email'] in g.get('members', []):
-                                            g['members'].remove(s['email'])
-                                    save_school_data(school_code, "groups.json", groups)
-                                    
-                                    # Update stats
                                     school['stats']['students'] -= 1
                                     all_schools = load_all_schools()
                                     all_schools[school_code] = school
                                     save_all_schools(all_schools)
-                                    
-                                    st.success(f"✅ Student {s['fullname']} removed")
                                     st.rerun()
+                            st.divider()
                 else:
                     st.info("No students enrolled yet")
             
-            with tab2:
-                st.subheader("Manually Add Student")
+            elif menu == "Approvals":
+                st.markdown("<h1 style='text-align: center;'>✅ Pending Approvals</h1>", unsafe_allow_html=True)
+                tab1, tab2 = st.tabs(["📚 Class Requests", "👥 Group Requests"])
                 
-                with st.form("add_student"):
-                    student_fullname = st.text_input("Full Name")
-                    student_email = st.text_input("Email")
-                    student_password = st.text_input("Temporary Password", type="password")
-                    
-                    if st.form_submit_button("➕ Add Student", use_container_width=True):
-                        if student_fullname and student_email and student_password:
-                            # Check if email exists
-                            if any(u['email'] == student_email for u in users):
-                                st.error("❌ Email already exists!")
-                            else:
-                                new_student = {
-                                    "user_id": generate_id("USR"),
-                                    "email": student_email,
-                                    "fullname": student_fullname,
-                                    "password": hashlib.sha256(student_password.encode()).hexdigest(),
-                                    "role": "student",
-                                    "profile_pic": None,
-                                    "bio": "",
-                                    "phone": "",
-                                    "joined": datetime.now().strftime("%Y-%m-%d"),
-                                    "status": "active",
-                                    "school_code": school_code,
-                                    "classes": [],
-                                    "groups": []
-                                }
-                                users.append(new_student)
-                                save_school_data(school_code, "users.json", users)
-                                
-                                school['stats']['students'] = school['stats'].get('students', 0) + 1
-                                all_schools = load_all_schools()
-                                all_schools[school_code] = school
-                                save_all_schools(all_schools)
-                                
-                                st.success(f"✅ Student {student_fullname} added successfully!")
-                                st.rerun()
-        
-        # ---------- MANAGE GROUPS (WITH VETO POWER) ----------
-        elif menu == "👥 Manage Groups":
-            st.title("👥 Group Management - Admin Veto Power")
-            st.warning("⚡ As Admin, you have VETO power over all groups. You can approve/deny requests and manage members.")
-            
-            tab1, tab2, tab3 = st.tabs(["➕ Create Group", "📋 All Groups", "🛠️ Manage Members (Veto)"])
-            
-            with tab1:
-                st.subheader("Create New Group")
-                
-                with st.form("admin_create_group"):
-                    group_name = st.text_input("Group Name", placeholder="e.g., Math Study Group")
-                    group_description = st.text_area("Description", placeholder="What will this group focus on?")
-                    
-                    # Select class
-                    class_options = [c['name'] for c in classes]
-                    related_class = st.selectbox("Related Class", ["None"] + class_options) if class_options else "None"
-                    
-                    # Select teacher leader
-                    teacher_users = [u for u in users if u['role'] == 'teacher']
-                    teacher_options = [f"{t['fullname']} ({t['email']})" for t in teacher_users]
-                    
-                    if teacher_options:
-                        group_leader = st.selectbox("Group Leader", teacher_options)
-                        leader_email = teacher_users[teacher_options.index(group_leader)]['email']
-                        leader_name = group_leader.split("(")[0].strip()
-                    else:
-                        leader_email = user['email']
-                        leader_name = user['fullname']
-                        st.info("No teachers available. Admin will be group leader.")
-                    
-                    max_members = st.number_input("Maximum Members", min_value=2, max_value=50, value=10)
-                    
-                    if st.form_submit_button("✅ Create Group", use_container_width=True):
-                        if group_name:
-                            group_code = generate_group_code()
-                            
-                            new_group = {
-                                "id": generate_id("GRP"),
-                                "code": group_code,
-                                "name": group_name,
-                                "description": group_description,
-                                "class": None if related_class == "None" else related_class,
-                                "leader": leader_email,
-                                "leader_name": leader_name,
-                                "created_by": user['email'],
-                                "created_by_name": user['fullname'],
-                                "created": datetime.now().strftime("%Y-%m-%d"),
-                                "max_members": max_members,
-                                "members": [leader_email],
-                                "pending_requests": [],
-                                "status": "active"
-                            }
-                            
-                            groups.append(new_group)
-                            save_school_data(school_code, "groups.json", groups)
-                            school['stats']['groups'] = school['stats'].get('groups', 0) + 1
-                            
-                            all_schools = load_all_schools()
-                            all_schools[school_code] = school
-                            save_all_schools(all_schools)
-                            
-                            st.success(f"✅ Group created! Code: **{group_code}**")
-                            st.rerun()
-            
-            with tab2:
-                st.subheader("All Groups")
-                
-                if groups:
-                    for g in groups:
-                        with st.expander(f"👥 {g['name']} - {g['code']}"):
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                st.markdown(f"**Description:** {g.get('description', 'No description')}")
-                                st.markdown(f"**Leader:** {g.get('leader_name', 'Unknown')}")
-                                st.markdown(f"**Class:** {g.get('class', 'General')}")
-                            with col2:
-                                st.markdown(f"**Members:** {len(g.get('members', []))}/{g.get('max_members', 10)}")
-                                st.markdown(f"**Created:** {g['created']}")
-                                st.markdown(f"**Code:** `{g['code']}`")
-                            
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                if st.button("🗑️ Delete Group", key=f"del_group_{g['id']}"):
-                                    groups.remove(g)
-                                    save_school_data(school_code, "groups.json", groups)
-                                    school['stats']['groups'] -= 1
-                                    all_schools = load_all_schools()
-                                    all_schools[school_code] = school
-                                    save_all_schools(all_schools)
-                                    st.rerun()
-                            with col2:
-                                st.markdown("**⚡ Admin Veto Power**")
-                else:
-                    st.info("No groups created yet")
-            
-            with tab3:
-                st.subheader("🛠️ Admin Veto - Manage Group Members")
-                st.warning("You can add or remove any member from any group. This overrides teacher decisions.")
-                
-                if groups:
-                    selected_group = st.selectbox(
-                        "Select Group to Manage",
-                        options=[g['name'] for g in groups],
-                        format_func=lambda x: f"{x} - {next(g['code'] for g in groups if g['name'] == x)}"
-                    )
-                    
-                    if selected_group:
-                        group = next(g for g in groups if g['name'] == selected_group)
-                        
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            st.markdown("**👥 Current Members**")
-                            if group.get('members'):
-                                for member_email in group['members']:
-                                    member = next((u for u in users if u['email'] == member_email), None)
-                                    if member:
-                                        col_a, col_b = st.columns([3, 1])
-                                        with col_a:
-                                            st.markdown(f"- {member['fullname']} ({member['role']})")
-                                        with col_b:
-                                            if st.button("❌ Remove", key=f"remove_member_{group['id']}_{member_email}"):
-                                                group['members'].remove(member_email)
-                                                save_school_data(school_code, "groups.json", groups)
-                                                st.rerun()
-                            else:
-                                st.info("No members")
-                        
-                        with col2:
-                            st.markdown("**➕ Add Member (Veto)**")
-                            # Get all students not in group
-                            non_members = [u for u in users if u['role'] == 'student' and u['email'] not in group.get('members', [])]
-                            if non_members:
-                                student_options = {f"{s['fullname']} ({s['email']})": s['email'] for s in non_members}
-                                selected_student = st.selectbox("Select Student", list(student_options.keys()))
-                                student_email = student_options[selected_student]
-                                
-                                if st.button("✅ Add Member", use_container_width=True):
-                                    group['members'].append(student_email)
-                                    save_school_data(school_code, "groups.json", groups)
-                                    st.success(f"Added {selected_student} to group!")
-                                    st.rerun()
-                            else:
-                                st.info("No students available to add")
-                        
-                        st.divider()
-                        st.markdown("**📋 Pending Join Requests**")
-                        pending_requests = [r for r in group_requests if r['group_name'] == group['name'] and r['status'] == 'pending']
-                        if pending_requests:
-                            for req in pending_requests:
-                                col_a, col_b, col_c = st.columns([2, 2, 2])
-                                with col_a:
-                                    st.markdown(f"**{req['student_name']}**")
-                                with col_b:
-                                    st.markdown(f"Requested: {req['date'][:16]}")
-                                with col_c:
-                                    col1, col2 = st.columns(2)
-                                    with col1:
-                                        if st.button("✅ Approve (Veto)", key=f"veto_app_{req['id']}"):
-                                            # Add to group
-                                            group['members'].append(req['student_email'])
-                                            # Update request
-                                            req['status'] = 'approved'
-                                            req['approved_by'] = user['email']
-                                            req['approved_date'] = datetime.now().strftime("%Y-%m-%d %H:%M")
-                                            save_school_data(school_code, "groups.json", groups)
-                                            save_school_data(school_code, "group_requests.json", group_requests)
-                                            st.rerun()
-                                    with col2:
-                                        if st.button("❌ Deny (Veto)", key=f"veto_deny_{req['id']}"):
-                                            req['status'] = 'denied'
-                                            req['denied_by'] = user['email']
-                                            req['denied_date'] = datetime.now().strftime("%Y-%m-%d %H:%M")
-                                            save_school_data(school_code, "group_requests.json", group_requests)
-                                            st.rerun()
-                        else:
-                            st.info("No pending requests for this group")
-                else:
-                    st.info("No groups available")
-        
-        # ---------- APPROVAL REQUESTS (VETO POWER) ----------
-        elif menu.startswith("✅ Approval Requests"):
-            st.title("✅ Approval Requests - Admin Veto Power")
-            st.warning("⚡ As Admin, your approval OVERRIDES any teacher decision. You have final say.")
-            
-            tab1, tab2 = st.tabs(["📚 Class Join Requests", "👥 Group Join Requests"])
-            
-            with tab1:
-                st.subheader("Class Join Requests")
-                
-                pending_class = [r for r in class_requests if r['status'] == 'pending']
-                
-                if pending_class:
-                    for req in pending_class:
-                        with st.container(border=True):
-                            col1, col2, col3 = st.columns([2, 2, 2])
-                            with col1:
-                                st.markdown(f"**Student:** {req['student_name']}")
-                                st.markdown(f"📧 {req['student_email']}")
-                            with col2:
-                                st.markdown(f"**Class:** {req['class_name']}")
-                                st.markdown(f"📅 Requested: {req['date']}")
-                            with col3:
-                                col_a, col_b = st.columns(2)
-                                with col_a:
-                                    if st.button("✅ Approve (Veto)", key=f"veto_app_class_{req['id']}"):
-                                        # Add student to class
+                with tab1:
+                    pending_classes = [r for r in class_requests if r['status'] == 'pending']
+                    if pending_classes:
+                        for req in pending_classes:
+                            with st.container():
+                                col1, col2, col3 = st.columns([2, 2, 2])
+                                with col1:
+                                    st.write(f"**{req['student_name']}**")
+                                with col2:
+                                    st.write(f"📚 {req['class_name']}")
+                                with col3:
+                                    if st.button("✅ Approve", key=f"app_class_{req['id']}"):
                                         for c in classes:
                                             if c['name'] == req['class_name']:
-                                                if req['student_email'] not in c['students']:
-                                                    c['students'].append(req['student_email'])
-                                        save_school_data(school_code, "classes.json", classes)
-                                        
-                                        # Update request status
+                                                c['students'].append(req['student_email'])
                                         req['status'] = 'approved'
-                                        req['approved_by'] = user['email'] + " (Admin Veto)"
-                                        req['approved_date'] = datetime.now().strftime("%Y-%m-%d %H:%M")
-                                        save_school_data(school_code, "class_requests.json", class_requests)
-                                        
-                                        st.success("✅ Approved (Admin Veto)!")
-                                        st.rerun()
-                                with col_b:
-                                    if st.button("❌ Deny (Veto)", key=f"veto_deny_class_{req['id']}"):
-                                        req['status'] = 'denied'
-                                        req['denied_by'] = user['email'] + " (Admin Veto)"
-                                        req['denied_date'] = datetime.now().strftime("%Y-%m-%d %H:%M")
+                                        save_school_data(school_code, "classes.json", classes)
                                         save_school_data(school_code, "class_requests.json", class_requests)
                                         st.rerun()
-                else:
-                    st.info("No pending class join requests")
-            
-            with tab2:
-                st.subheader("Group Join Requests")
+                                st.divider()
+                    else:
+                        st.info("No pending class requests")
                 
-                pending_group = [r for r in group_requests if r['status'] == 'pending']
-                
-                if pending_group:
-                    for req in pending_group:
-                        with st.container(border=True):
-                            col1, col2, col3 = st.columns([2, 2, 2])
-                            with col1:
-                                st.markdown(f"**Student:** {req['student_name']}")
-                                st.markdown(f"📧 {req['student_email']}")
-                            with col2:
-                                st.markdown(f"**Group:** {req['group_name']}")
-                                st.markdown(f"📅 Requested: {req['date']}")
-                            with col3:
-                                col_a, col_b = st.columns(2)
-                                with col_a:
-                                    if st.button("✅ Approve (Veto)", key=f"veto_app_group_{req['id']}"):
-                                        # Add student to group
+                with tab2:
+                    pending_groups = [r for r in group_requests if r['status'] == 'pending']
+                    if pending_groups:
+                        for req in pending_groups:
+                            with st.container():
+                                col1, col2, col3 = st.columns([2, 2, 2])
+                                with col1:
+                                    st.write(f"**{req['student_name']}**")
+                                with col2:
+                                    st.write(f"👥 {req['group_name']}")
+                                with col3:
+                                    if st.button("✅ Approve", key=f"app_group_{req['id']}"):
                                         for g in groups:
                                             if g['name'] == req['group_name']:
-                                                if req['student_email'] not in g['members']:
-                                                    g['members'].append(req['student_email'])
-                                        save_school_data(school_code, "groups.json", groups)
-                                        
-                                        # Update request status
+                                                g['members'].append(req['student_email'])
                                         req['status'] = 'approved'
-                                        req['approved_by'] = user['email'] + " (Admin Veto)"
-                                        req['approved_date'] = datetime.now().strftime("%Y-%m-%d %H:%M")
-                                        save_school_data(school_code, "group_requests.json", group_requests)
-                                        
-                                        st.success("✅ Approved (Admin Veto)!")
-                                        st.rerun()
-                                with col_b:
-                                    if st.button("❌ Deny (Veto)", key=f"veto_deny_group_{req['id']}"):
-                                        req['status'] = 'denied'
-                                        req['denied_by'] = user['email'] + " (Admin Veto)"
-                                        req['denied_date'] = datetime.now().strftime("%Y-%m-%d %H:%M")
+                                        save_school_data(school_code, "groups.json", groups)
                                         save_school_data(school_code, "group_requests.json", group_requests)
                                         st.rerun()
-                else:
-                    st.info("No pending group join requests")
-        
-        # ---------- GENERATE CODES ----------
-        elif menu == "🔑 Generate Codes":
-            st.title("🔑 Code Generation Center")
+                                st.divider()
+                    else:
+                        st.info("No pending group requests")
             
-            tab1, tab2, tab3 = st.tabs(["👨‍🏫 Custom Teacher Codes", "📚 Class Codes", "👥 Group Codes"])
-            
-            with tab1:
-                st.subheader("🔑 Create Custom Teacher Codes")
-                st.success("✅ Create ANY code you want! These codes NEVER expire.")
-                
-                with st.form("gen_custom_teacher_codes"):
-                    code_name = st.text_input("📝 Code Name/Description", placeholder="e.g., Mathematics Department")
-                    custom_code = st.text_input("🔑 Custom Teacher Code", placeholder="e.g., MATH-DEPT, FORM1-2024")
-                    teacher_dept = st.selectbox("Department", ["Mathematics", "Science", "English", "History", "Computer Science", "Administration", "Other"])
-                    
-                    if st.form_submit_button("✅ CREATE CUSTOM CODE", use_container_width=True):
-                        if code_name and custom_code:
-                            # Check if code already exists
-                            code_exists = False
-                            for t in teachers_data:
-                                if t['code'] == custom_code.upper():
-                                    code_exists = True
-                                    break
-                            
-                            if code_exists:
-                                st.error(f"❌ Code '{custom_code.upper()}' already exists!")
-                            else:
-                                teachers_data.append({
-                                    "id": generate_id("TCH"),
-                                    "name": code_name,
-                                    "code": custom_code.upper(),
-                                    "department": teacher_dept,
-                                    "created": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                                    "status": "active",
-                                    "used_by_list": [],
-                                    "is_permanent": True,
-                                    "is_custom": True
-                                })
-                                save_school_data(school_code, "teachers.json", teachers_data)
-                                st.success(f"✅ Custom code created: **{custom_code.upper()}**")
-                                st.rerun()
-            
-            with tab2:
-                st.subheader("Active Class Codes")
-                if classes:
-                    for c in classes:
-                        with st.container(border=True):
-                            col1, col2 = st.columns([2, 1])
-                            with col1:
-                                st.markdown(f"**{c['name']}**")
-                                st.markdown(f"Teacher: {c.get('teacher_name', c['teacher'])}")
-                            with col2:
-                                st.code(c['code'])
-                                st.caption(f"Students: {len(c.get('students', []))}")
-                else:
-                    st.info("No classes created yet")
-            
-            with tab3:
-                st.subheader("Active Group Codes")
-                if groups:
-                    for g in groups:
-                        with st.container(border=True):
-                            col1, col2 = st.columns([2, 1])
-                            with col1:
-                                st.markdown(f"**{g['name']}**")
-                                st.markdown(f"Leader: {g.get('leader_name', 'Unknown')}")
-                            with col2:
-                                st.code(g['code'])
-                                st.caption(f"Members: {len(g.get('members', []))}")
-                else:
-                    st.info("No groups created yet")
-        
-        # ---------- REPORTS ----------
-        elif menu == "📊 Reports":
-            st.title("📊 School Reports")
-            
-            tab1, tab2, tab3 = st.tabs(["📈 Overview", "👨‍🎓 Student Report", "👨‍🏫 Teacher Report"])
-            
-            with tab1:
-                st.subheader("School Overview")
-                
-                col1, col2, col3, col4 = st.columns(4)
+            elif menu == "Profile":
+                st.markdown("<h1 style='text-align: center;'>👤 My Profile</h1>", unsafe_allow_html=True)
+                col1, col2 = st.columns([1, 2])
                 with col1:
-                    st.metric("Total Students", school['stats'].get('students', 0))
-                with col2:
-                    st.metric("Total Teachers", school['stats'].get('teachers', 0))
-                with col3:
-                    st.metric("Total Classes", school['stats'].get('classes', 0))
-                with col4:
-                    st.metric("Total Groups", school['stats'].get('groups', 0))
-                
-                st.divider()
-                
-                # Class size distribution
-                st.subheader("📊 Class Size Distribution")
-                if classes:
-                    class_sizes = [len(c.get('students', [])) for c in classes]
-                    avg_size = sum(class_sizes) / len(class_sizes) if class_sizes else 0
-                    st.metric("Average Class Size", round(avg_size, 1))
-                    st.metric("Largest Class", max(class_sizes) if class_sizes else 0)
-                    st.metric("Smallest Class", min(class_sizes) if class_sizes else 0)
-                else:
-                    st.info("No class data available")
-            
-            with tab2:
-                st.subheader("Student Report")
-                
-                student_users = [u for u in users if u['role'] == 'student']
-                
-                if student_users:
-                    report_data = []
-                    for s in student_users:
-                        student_classes = len([c for c in classes if s['email'] in c.get('students', [])])
-                        student_groups = len([g for g in groups if s['email'] in g.get('members', [])])
-                        
-                        report_data.append({
-                            "Name": s['fullname'],
-                            "Email": s['email'],
-                            "Joined": s['joined'],
-                            "Classes": student_classes,
-                            "Groups": student_groups
-                        })
-                    
-                    st.dataframe(report_data, use_container_width=True)
-                else:
-                    st.info("No student data available")
-            
-            with tab3:
-                st.subheader("Teacher Report")
-                
-                teacher_users = [u for u in users if u['role'] == 'teacher']
-                
-                if teacher_users:
-                    teacher_data = []
-                    for t in teacher_users:
-                        teacher_classes = [c for c in classes if c.get('teacher') == t['email']]
-                        total_students = sum(len(c.get('students', [])) for c in teacher_classes)
-                        
-                        teacher_data.append({
-                            "Name": t['fullname'],
-                            "Email": t['email'],
-                            "Classes": len(teacher_classes),
-                            "Total Students": total_students,
-                            "Joined": t['joined']
-                        })
-                    
-                    st.dataframe(teacher_data, use_container_width=True)
-                else:
-                    st.info("No teacher data available")
-        
-        # ---------- SCHOOL SETTINGS ----------
-        elif menu == "⚙️ School Settings":
-            st.title("⚙️ School Settings")
-            
-            with st.form("school_settings"):
-                school_name = st.text_input("School Name", value=school.get('name', ''))
-                school_motto = st.text_input("School Motto", value=school.get('motto', ''))
-                school_city = st.text_input("City", value=school.get('city', ''))
-                school_state = st.text_input("State", value=school.get('state', ''))
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    admin_name = st.text_input("Admin Name", value=school.get('admin_name', user['fullname']))
-                with col2:
-                    admin_email = st.text_input("Admin Email", value=school.get('admin_email', user['email']), disabled=True)
-                
-                if st.form_submit_button("💾 Save Settings", use_container_width=True):
-                    school['name'] = school_name
-                    school['motto'] = school_motto
-                    school['city'] = school_city
-                    school['state'] = school_state
-                    school['admin_name'] = admin_name
-                    
-                    all_schools = load_all_schools()
-                    all_schools[school_code] = school
-                    save_all_schools(all_schools)
-                    
-                    st.success("✅ School settings saved!")
-                    st.rerun()
-        
-        # ---------- ADMIN PROFILE ----------
-        elif menu == "👤 My Profile":
-            st.title("👤 My Profile")
-            
-            col1, col2 = st.columns([1, 2])
-            
-            with col1:
-                st.subheader("Profile Picture")
-                if user.get('profile_pic'):
-                    st.image(user['profile_pic'], width=200)
-                else:
-                    st.markdown("# 👑")
-                
-                uploaded_file = st.file_uploader("Upload Photo", type=['png', 'jpg', 'jpeg'])
-                if uploaded_file:
-                    image = Image.open(uploaded_file)
-                    buffered = BytesIO()
-                    image.save(buffered, format="PNG")
-                    img_str = base64.b64encode(buffered.getvalue()).decode()
-                    
-                    for u in users:
-                        if u['email'] == user['email']:
-                            u['profile_pic'] = f"data:image/png;base64,{img_str}"
-                            break
-                    
-                    save_school_data(school_code, "users.json", users)
-                    user['profile_pic'] = f"data:image/png;base64,{img_str}"
-                    st.success("✅ Profile picture updated!")
-                    st.rerun()
-            
-            with col2:
-                st.subheader("Edit Profile")
-                with st.form("edit_admin_profile"):
-                    fullname = st.text_input("Full Name", value=user.get('fullname', ''))
-                    email = st.text_input("Email", value=user.get('email', ''), disabled=True)
-                    phone = st.text_input("Phone Number", value=user.get('phone', ''))
-                    title = st.text_input("Title", value=user.get('title', 'School Administrator'))
-                    bio = st.text_area("Bio", value=user.get('bio', ''), height=100)
-                    
-                    if st.form_submit_button("💾 Update Profile", use_container_width=True):
+                    if user.get('profile_pic'):
+                        st.image(user['profile_pic'], width=150)
+                    else:
+                        st.markdown("<h1 style='font-size: 5rem; text-align: center;'>👑</h1>", unsafe_allow_html=True)
+                    pic = st.file_uploader("📸 Upload Photo", type=['png', 'jpg', 'jpeg'])
+                    if pic:
+                        img = Image.open(pic)
+                        buffered = BytesIO()
+                        img.save(buffered, format="PNG")
+                        b64 = base64.b64encode(buffered.getvalue()).decode()
                         for u in users:
                             if u['email'] == user['email']:
-                                u['fullname'] = fullname
-                                u['phone'] = phone
-                                u['title'] = title
-                                u['bio'] = bio
-                                break
-                        
+                                u['profile_pic'] = f"data:image/png;base64,{b64}"
                         save_school_data(school_code, "users.json", users)
-                        user['fullname'] = fullname
-                        user['phone'] = phone
-                        user['title'] = title
-                        user['bio'] = bio
-                        st.success("✅ Profile updated!")
+                        user['profile_pic'] = f"data:image/png;base64,{b64}"
                         st.rerun()
-    
-    # ----- TEACHER DASHBOARD -----
-    elif user['role'] == 'teacher':
-        
-        # ---------- TEACHER DASHBOARD ----------
-        if menu == "🏠 Dashboard":
-            st.title(f"👨‍🏫 Welcome, {user['fullname']}")
-            
-            my_classes = [c for c in classes if c.get('teacher') == user['email']]
-            my_groups = [g for g in groups if g.get('leader') == user['email']]
-            
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("📚 My Classes", len(my_classes))
-            with col2:
-                st.metric("👥 My Groups", len(my_groups))
-            with col3:
-                st.metric("📝 Assignments", len([a for a in assignments if a.get('teacher') == user['email']]))
-            
-            st.divider()
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.subheader("📚 My Classes")
-                if my_classes:
-                    for c in my_classes[:3]:
-                        with st.container(border=True):
-                            st.markdown(f"**{c['name']}**")
-                            st.markdown(f"Code: `{c['code']}`")
-                            st.markdown(f"Students: {len(c.get('students', []))}")
-                else:
-                    st.info("You haven't been assigned any classes")
-            
-            with col2:
-                st.subheader("✅ Pending Requests")
-                teacher_pending = [r for r in class_requests if r['status'] == 'pending' and r.get('class_name') in [c['name'] for c in my_classes]]
-                if teacher_pending:
-                    st.warning(f"{len(teacher_pending)} pending request(s)")
-                    if st.button("Review Requests"):
-                        st.session_state.menu_index = 5
-                        st.rerun()
-                else:
-                    st.success("No pending requests")
-        
-        # ---------- TEACHER ANNOUNCEMENTS ----------
-        elif menu == "📢 My Announcements":
-            st.title("📢 Post Announcement")
-            
-            with st.form("teacher_announcement"):
-                title = st.text_input("Title")
-                content = st.text_area("Content", height=150)
-                
-                my_classes = [c['name'] for c in classes if c.get('teacher') == user['email']]
-                target = st.selectbox("Target Class", ["All Classes"] + my_classes) if my_classes else "All Classes"
-                
-                col1, col2 = st.columns(2)
-                with col1:
-                    important = st.checkbox("⭐ Important")
-                
-                if st.form_submit_button("📢 Post", use_container_width=True):
-                    if title and content:
-                        new_ann = {
-                            "id": generate_id("ANN"),
-                            "title": title,
-                            "content": content,
-                            "author": user['fullname'],
-                            "author_email": user['email'],
-                            "author_role": "teacher",
-                            "target_class": target,
-                            "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                            "important": important
-                        }
-                        announcements.append(new_ann)
-                        save_school_data(school_code, "announcements.json", announcements)
-                        st.success("✅ Announcement posted!")
-                        st.rerun()
-            
-            st.divider()
-            st.subheader("📋 My Recent Announcements")
-            my_anns = [a for a in announcements if a.get('author_email') == user['email']][-5:]
-            if my_anns:
-                for a in reversed(my_anns):
-                    with st.container(border=True):
-                        st.markdown(f"**{a['title']}**")
-                        st.markdown(a['content'])
-                        st.caption(f"{a['date']} | Target: {a.get('target_class', 'All')}")
-            else:
-                st.info("No announcements yet")
-        
-        # ---------- MY CLASSES ----------
-        elif menu == "📚 My Classes":
-            st.title("📚 My Classes")
-            
-            my_classes = [c for c in classes if c.get('teacher') == user['email']]
-            
-            if my_classes:
-                for c in my_classes:
-                    with st.expander(f"📖 {c['name']} - {c['code']}", expanded=True):
-                        tab1, tab2, tab3 = st.tabs(["📝 Info", "👥 Students", "📊 Grades"])
-                        
-                        with tab1:
-                            st.markdown(f"**Class Code:** `{c['code']}`")
-                            st.markdown(f"**Subject:** {c.get('subject', 'N/A')}")
-                            st.markdown(f"**Room:** {c.get('room', 'TBD')}")
-                            st.markdown(f"**Schedule:** {c.get('schedule', 'TBD')}")
-                            st.markdown(f"**Students:** {len(c.get('students', []))}/{c.get('max_students', 30)}")
-                        
-                        with tab2:
-                            st.subheader("Enrolled Students")
-                            enrolled = [u for u in users if u['email'] in c.get('students', [])]
-                            
-                            if enrolled:
-                                for s in enrolled:
-                                    col1, col2, col3 = st.columns([2, 2, 1])
-                                    with col1:
-                                        st.markdown(f"**{s['fullname']}**")
-                                    with col2:
-                                        st.markdown(f"📧 {s['email']}")
-                                    with col3:
-                                        if st.button("🗑️", key=f"remove_{c['code']}_{s['email']}"):
-                                            c['students'].remove(s['email'])
-                                            save_school_data(school_code, "classes.json", classes)
-                                            st.rerun()
-                                    st.divider()
-                            else:
-                                st.info("No students enrolled")
-                        
-                        with tab3:
-                            st.subheader("Grade Book")
-                            enrolled = [u for u in users if u['email'] in c.get('students', [])]
-                            
-                            if enrolled:
-                                for s in enrolled:
-                                    col1, col2 = st.columns([2, 1])
-                                    with col1:
-                                        st.markdown(f"**{s['fullname']}**")
-                                    with col2:
-                                        grade = st.selectbox(
-                                            "Grade",
-                                            ["A", "B", "C", "D", "F", "I", "N/A"],
-                                            key=f"grade_{c['code']}_{s['email']}"
-                                        )
-                                        if st.button("Save", key=f"save_{c['code']}_{s['email']}"):
-                                            grade_entry = {
-                                                "student": s['email'],
-                                                "student_name": s['fullname'],
-                                                "class": c['name'],
-                                                "grade": grade,
-                                                "teacher": user['email'],
-                                                "date": datetime.now().strftime("%Y-%m-%d")
-                                            }
-                                            grades.append(grade_entry)
-                                            save_school_data(school_code, "grades.json", grades)
-                                            st.success("Saved!")
-                            else:
-                                st.info("No students to grade")
-            else:
-                st.warning("You haven't been assigned to any classes yet")
-        
-        # ---------- MY GROUPS ----------
-        elif menu == "👥 My Groups":
-            st.title("👥 My Groups")
-            
-            my_groups = [g for g in groups if g.get('leader') == user['email']]
-            
-            tab1, tab2 = st.tabs(["➕ Create Group", "📋 My Groups"])
-            
-            with tab1:
-                st.subheader("Create New Group")
-                
-                with st.form("teacher_create_group"):
-                    group_name = st.text_input("Group Name")
-                    group_description = st.text_area("Description")
-                    
-                    my_classes = [c['name'] for c in classes if c.get('teacher') == user['email']]
-                    related_class = st.selectbox("Related Class", ["None"] + my_classes) if my_classes else "None"
-                    
-                    max_members = st.number_input("Max Members", min_value=2, max_value=50, value=10)
-                    
-                    if st.form_submit_button("✅ Create", use_container_width=True):
-                        if group_name:
-                            group_code = generate_group_code()
-                            new_group = {
-                                "id": generate_id("GRP"),
-                                "code": group_code,
-                                "name": group_name,
-                                "description": group_description,
-                                "class": None if related_class == "None" else related_class,
-                                "leader": user['email'],
-                                "leader_name": user['fullname'],
-                                "created": datetime.now().strftime("%Y-%m-%d"),
-                                "max_members": max_members,
-                                "members": [user['email']],
-                                "pending_requests": [],
-                                "status": "active"
-                            }
-                            groups.append(new_group)
-                            save_school_data(school_code, "groups.json", groups)
-                            school['stats']['groups'] = school['stats'].get('groups', 0) + 1
-                            
-                            all_schools = load_all_schools()
-                            all_schools[school_code] = school
-                            save_all_schools(all_schools)
-                            
-                            st.success(f"✅ Group created! Code: {group_code}")
+                with col2:
+                    with st.form("edit_profile"):
+                        name = st.text_input("Full Name", user['fullname'])
+                        phone = st.text_input("Phone", user.get('phone', ''))
+                        bio = st.text_area("Bio", user.get('bio', ''))
+                        if st.form_submit_button("💾 Update Profile", use_container_width=True):
+                            for u in users:
+                                if u['email'] == user['email']:
+                                    u['fullname'] = name
+                                    u['phone'] = phone
+                                    u['bio'] = bio
+                            save_school_data(school_code, "users.json", users)
+                            user.update({'fullname': name, 'phone': phone, 'bio': bio})
+                            st.success("Profile updated!")
                             st.rerun()
-            
-            with tab2:
-                if my_groups:
-                    for g in my_groups:
-                        with st.expander(f"👥 {g['name']} - {g['code']}"):
-                            st.markdown(f"**Description:** {g.get('description', 'No description')}")
-                            st.markdown(f"**Members:** {len(g.get('members', []))}/{g.get('max_members', 10)}")
-                            st.markdown(f"**Code:** `{g['code']}`")
-                            
-                            # Show members
-                            st.markdown("**Members:**")
-                            for member_email in g.get('members', []):
-                                member = next((u for u in users if u['email'] == member_email), None)
-                                if member:
-                                    st.markdown(f"- {member['fullname']} ({member['role']})")
-                            
-                            if st.button("🗑️ Delete", key=f"del_teacher_group_{g['id']}"):
-                                groups.remove(g)
-                                save_school_data(school_code, "groups.json", groups)
-                                school['stats']['groups'] -= 1
-                                all_schools = load_all_schools()
-                                all_schools[school_code] = school
-                                save_all_schools(all_schools)
-                                st.rerun()
-                else:
-                    st.info("You haven't created any groups yet")
         
-        # ---------- ASSIGNMENTS ----------
-        elif menu == "📝 Assignments":
-            st.title("📝 Create Assignment")
-            
-            my_classes = [c['name'] for c in classes if c.get('teacher') == user['email']]
-            
-            if my_classes:
-                with st.form("create_assignment"):
-                    class_name = st.selectbox("Class", my_classes)
-                    title = st.text_input("Assignment Title")
-                    description = st.text_area("Description")
-                    due_date = st.date_input("Due Date")
-                    total_points = st.number_input("Total Points", min_value=1, value=100)
-                    
-                    assignment_code = generate_id("ASN")
-                    
-                    if st.form_submit_button("✅ Create", use_container_width=True):
-                        new_assignment = {
-                            "code": assignment_code,
-                            "class": class_name,
-                            "teacher": user['email'],
-                            "teacher_name": user['fullname'],
-                            "title": title,
-                            "description": description,
-                            "due": due_date.strftime("%Y-%m-%d"),
-                            "points": total_points,
-                            "created": datetime.now().strftime("%Y-%m-%d"),
-                            "submissions": []
-                        }
-                        assignments.append(new_assignment)
-                        save_school_data(school_code, "assignments.json", assignments)
-                        st.success(f"✅ Assignment created! Code: {assignment_code}")
-                        st.rerun()
+        # ----- TEACHER SECTION -----
+        elif user['role'] == 'teacher':
+            if menu == "Dashboard":
+                st.markdown(f"<h1 style='text-align: center;'>👨‍🏫 Welcome, {user['fullname']}!</h1>", unsafe_allow_html=True)
+                my_classes = [c for c in classes if c.get('teacher') == user['email']]
+                my_groups = [g for g in groups if g.get('leader') == user['email']]
                 
-                st.divider()
-                st.subheader("📋 Recent Assignments")
-                my_assignments = [a for a in assignments if a.get('teacher') == user['email']][-5:]
-                if my_assignments:
-                    for a in my_assignments:
-                        with st.container(border=True):
-                            st.markdown(f"**{a['title']}** - {a['class']}")
-                            st.caption(f"Due: {a['due']} | Code: {a['code']}")
-            else:
-                st.warning("You need to be assigned to a class first")
-        
-        # ---------- APPROVE REQUESTS ----------
-        elif menu.startswith("✅ Approve Requests"):
-            st.title("✅ Approve Join Requests")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("My Classes", len(my_classes))
+                with col2:
+                    st.metric("My Groups", len(my_groups))
+                with col3:
+                    st.metric("Assignments", len([a for a in assignments if a.get('teacher') == user['email']]))
             
-            my_classes = [c['name'] for c in classes if c.get('teacher') == user['email']]
-            my_groups = [g['name'] for g in groups if g.get('leader') == user['email']]
+            elif menu == "My Classes":
+                st.markdown("<h1 style='text-align: center;'>📚 My Classes</h1>", unsafe_allow_html=True)
+                my_classes = [c for c in classes if c.get('teacher') == user['email']]
+                if my_classes:
+                    for c in my_classes:
+                        with st.expander(f"📖 {c['name']} - {c['code']} - {c['grade']}"):
+                            st.write(f"**Subject:** {c.get('subject', 'N/A')}")
+                            st.write(f"**Room:** {c.get('room', 'TBD')}")
+                            st.write(f"**Schedule:** {c.get('schedule', 'TBD')}")
+                            st.write(f"**Students:** {len(c.get('students', []))}/{c.get('max_students', 40)}")
+                            if c.get('students'):
+                                st.write("**Enrolled Students:**")
+                                for student_email in c['students']:
+                                    student = next((u for u in users if u['email'] == student_email), None)
+                                    if student:
+                                        st.write(f"- {student['fullname']} ({student.get('admission_number', 'N/A')})")
+                else:
+                    st.info("You haven't been assigned any classes yet")
             
-            tab1, tab2 = st.tabs(["📚 Class Requests", "👥 Group Requests"])
-            
-            with tab1:
-                class_reqs = [r for r in class_requests if r['status'] == 'pending' and r.get('class_name') in my_classes]
+            elif menu == "Requests":
+                st.markdown("<h1 style='text-align: center;'>✅ Pending Requests</h1>", unsafe_allow_html=True)
+                my_classes = [c['name'] for c in classes if c.get('teacher') == user['email']]
+                class_reqs = [r for r in class_requests if r['status'] == 'pending' and r['class_name'] in my_classes]
                 
                 if class_reqs:
                     for req in class_reqs:
-                        with st.container(border=True):
-                            col1, col2, col3 = st.columns([2, 2, 2])
+                        with st.container():
+                            col1, col2, col3 = st.columns([2, 2, 1])
                             with col1:
-                                st.markdown(f"**{req['student_name']}**")
-                                st.markdown(f"📧 {req['student_email']}")
+                                st.write(f"**{req['student_name']}**")
                             with col2:
-                                st.markdown(f"**Class:** {req['class_name']}")
-                                st.markdown(f"📅 {req['date']}")
+                                st.write(f"📚 {req['class_name']}")
                             with col3:
-                                col_a, col_b = st.columns(2)
-                                with col_a:
-                                    if st.button("✅", key=f"app_class_t_{req['id']}"):
-                                        for c in classes:
-                                            if c['name'] == req['class_name']:
-                                                if req['student_email'] not in c['students']:
-                                                    c['students'].append(req['student_email'])
-                                        save_school_data(school_code, "classes.json", classes)
-                                        
-                                        req['status'] = 'approved'
-                                        req['approved_by'] = user['email']
-                                        req['approved_date'] = datetime.now().strftime("%Y-%m-%d %H:%M")
-                                        save_school_data(school_code, "class_requests.json", class_requests)
-                                        st.rerun()
-                                with col_b:
-                                    if st.button("❌", key=f"deny_class_t_{req['id']}"):
-                                        req['status'] = 'denied'
-                                        req['denied_by'] = user['email']
-                                        req['denied_date'] = datetime.now().strftime("%Y-%m-%d %H:%M")
-                                        save_school_data(school_code, "class_requests.json", class_requests)
-                                        st.rerun()
+                                if st.button("✅ Approve", key=f"app_{req['id']}"):
+                                    for c in classes:
+                                        if c['name'] == req['class_name']:
+                                            c['students'].append(req['student_email'])
+                                    req['status'] = 'approved'
+                                    save_school_data(school_code, "classes.json", classes)
+                                    save_school_data(school_code, "class_requests.json", class_requests)
+                                    st.rerun()
+                            st.divider()
                 else:
-                    st.info("No pending class requests")
-            
-            with tab2:
-                group_reqs = [r for r in group_requests if r['status'] == 'pending' and r.get('group_name') in my_groups]
+                    st.info("No pending requests")
+        
+        # ----- STUDENT SECTION -----
+        elif user['role'] == 'student':
+            if menu == "Dashboard":
+                st.markdown(f"<h1 style='text-align: center;'>👨‍🎓 Welcome, {user['fullname']}!</h1>", unsafe_allow_html=True)
+                st.info(f"📋 Your Admission Number: **{user['admission_number']}**")
                 
-                if group_reqs:
-                    for req in group_reqs:
-                        with st.container(border=True):
-                            col1, col2, col3 = st.columns([2, 2, 2])
+                my_classes = [c for c in classes if user['email'] in c.get('students', [])]
+                my_groups = [g for g in groups if user['email'] in g.get('members', [])]
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("My Classes", len(my_classes))
+                with col2:
+                    st.metric("My Groups", len(my_groups))
+                with col3:
+                    upcoming = [a for a in assignments if a['class'] in [c['name'] for c in my_classes]]
+                    st.metric("Assignments", len(upcoming))
+            
+            elif menu == "Browse Classes":
+                st.markdown("<h1 style='text-align: center;'>📚 Available Classes</h1>", unsafe_allow_html=True)
+                available = [c for c in classes if user['email'] not in c.get('students', []) and len(c.get('students', [])) < c.get('max_students', 40)]
+                if available:
+                    for c in available:
+                        with st.container():
+                            col1, col2 = st.columns([3, 1])
                             with col1:
-                                st.markdown(f"**{req['student_name']}**")
-                                st.markdown(f"📧 {req['student_email']}")
+                                st.write(f"**{c['name']}** - {c['grade']}")
+                                st.write(f"👨‍🏫 {c.get('teacher_name', 'Unknown')} • {c.get('schedule', 'TBD')}")
+                                st.write(f"📚 {c.get('subject', 'N/A')}")
                             with col2:
-                                st.markdown(f"**Group:** {req['group_name']}")
-                                st.markdown(f"📅 {req['date']}")
-                            with col3:
-                                col_a, col_b = st.columns(2)
-                                with col_a:
-                                    if st.button("✅", key=f"app_group_t_{req['id']}"):
-                                        for g in groups:
-                                            if g['name'] == req['group_name']:
-                                                if req['student_email'] not in g['members']:
-                                                    g['members'].append(req['student_email'])
-                                        save_school_data(school_code, "groups.json", groups)
-                                        
-                                        req['status'] = 'approved'
-                                        req['approved_by'] = user['email']
-                                        req['approved_date'] = datetime.now().strftime("%Y-%m-%d %H:%M")
-                                        save_school_data(school_code, "group_requests.json", group_requests)
-                                        st.rerun()
-                                with col_b:
-                                    if st.button("❌", key=f"deny_group_t_{req['id']}"):
-                                        req['status'] = 'denied'
-                                        req['denied_by'] = user['email']
-                                        req['denied_date'] = datetime.now().strftime("%Y-%m-%d %H:%M")
-                                        save_school_data(school_code, "group_requests.json", group_requests)
-                                        st.rerun()
+                                if st.button("📝 Request", key=f"req_{c['code']}"):
+                                    class_requests.append({
+                                        "id": generate_id("REQ"),
+                                        "student_email": user['email'],
+                                        "student_name": user['fullname'],
+                                        "class_name": c['name'],
+                                        "class_code": c['code'],
+                                        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                                        "status": "pending"
+                                    })
+                                    save_school_data(school_code, "class_requests.json", class_requests)
+                                    st.success("Request sent!")
+                                    st.rerun()
+                            st.divider()
                 else:
-                    st.info("No pending group requests")
+                    st.info("No available classes to join")
         
-        # ---------- RESOURCES ----------
-        elif menu == "📎 Resources":
-            st.title("📎 Resources")
-            
-            with st.form("upload_resource"):
-                my_classes = [c['name'] for c in classes if c.get('teacher') == user['email']]
-                class_name = st.selectbox("Class", my_classes) if my_classes else "General"
+        # ----- GUARDIAN SECTION -----
+        elif user['role'] == 'guardian':
+            if menu == "Dashboard":
+                st.markdown(f"<h1 style='text-align: center;'>👪 Welcome, {user['fullname']}!</h1>", unsafe_allow_html=True)
                 
-                title = st.text_input("Resource Title")
-                description = st.text_area("Description")
-                resource_type = st.selectbox("Type", ["Notes", "Worksheet", "Presentation", "Video", "Link"])
+                # Show linked students
+                st.subheader("👨‍🎓 Your Linked Students")
+                for adm in user.get('linked_students', []):
+                    student = next((u for u in users if u.get('admission_number') == adm), None)
+                    if student:
+                        with st.container():
+                            col1, col2 = st.columns([1, 3])
+                            with col1:
+                                st.markdown("👨‍🎓")
+                            with col2:
+                                st.write(f"**{student['fullname']}**")
+                                st.write(f"Admission: {adm}")
+                                st.write(f"Email: {student['email'] if student['email'] else 'No email'}")
+                            
+                            # Show student's classes
+                            student_classes = [c for c in classes if student['email'] in c.get('students', [])]
+                            if student_classes:
+                                st.write("**Classes:**")
+                                for c in student_classes:
+                                    st.write(f"- {c['name']} ({c['grade']})")
+                            st.divider()
+            
+            elif menu == "My Student":
+                st.markdown("<h1 style='text-align: center;'>📚 Student Details</h1>", unsafe_allow_html=True)
                 
-                if st.form_submit_button("📤 Upload", use_container_width=True):
-                    if title:
-                        new_resource = {
-                            "id": generate_id("RES"),
-                            "class": class_name,
-                            "title": title,
-                            "description": description,
-                            "type": resource_type,
-                            "teacher": user['fullname'],
-                            "date": datetime.now().strftime("%Y-%m-%d"),
-                            "downloads": 0
-                        }
-                        resources.append(new_resource)
-                        save_school_data(school_code, "resources.json", resources)
-                        st.success("✅ Resource uploaded!")
-                        st.rerun()
-        
-        # ---------- DISCUSSIONS ----------
-        elif menu == "💬 Discussions":
-            st.title("💬 Discussions")
-            
-            with st.form("start_discussion"):
-                topic = st.text_input("Topic")
-                message = st.text_area("Message")
-                
-                if st.form_submit_button("💬 Post", use_container_width=True):
-                    new_discussion = {
-                        "id": generate_id("DIS"),
-                        "topic": topic,
-                        "message": message,
-                        "author": user['fullname'],
-                        "author_role": "teacher",
-                        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                        "replies": []
-                    }
-                    discussions.append(new_discussion)
-                    save_school_data(school_code, "discussions.json", discussions)
-                    st.success("Discussion posted!")
-                    st.rerun()
-        
-        # ---------- GRADE BOOK ----------
-        elif menu == "📊 Grade Book":
-            st.title("📊 Grade Book")
-            
-            my_classes = [c['name'] for c in classes if c.get('teacher') == user['email']]
-            
-            if my_classes:
-                selected_class = st.selectbox("Select Class", my_classes)
-                class_obj = next((c for c in classes if c['name'] == selected_class), None)
-                
-                if class_obj:
-                    st.subheader(f"Grades - {selected_class}")
-                    
-                    enrolled = [u for u in users if u['email'] in class_obj.get('students', [])]
-                    class_assignments = [a for a in assignments if a.get('class') == selected_class]
-                    
-                    if enrolled and class_assignments:
-                        for s in enrolled:
-                            with st.expander(s['fullname']):
-                                for a in class_assignments:
-                                    col1, col2 = st.columns([3, 1])
-                                    with col1:
-                                        st.markdown(f"**{a['title']}**")
-                                    with col2:
-                                        grade = st.text_input("Grade", key=f"g_{s['email']}_{a['code']}", placeholder="A, B, 85")
-                                        if st.button("Save", key=f"sg_{s['email']}_{a['code']}"):
-                                            grade_entry = {
-                                                "student": s['email'],
-                                                "assignment": a['code'],
-                                                "assignment_title": a['title'],
-                                                "class": selected_class,
-                                                "grade": grade,
-                                                "teacher": user['email'],
-                                                "date": datetime.now().strftime("%Y-%m-%d")
-                                            }
-                                            grades.append(grade_entry)
-                                            save_school_data(school_code, "grades.json", grades)
-                                            st.success("Saved!")
-                    else:
-                        st.info("No students or assignments in this class")
-            else:
-                st.warning("No classes assigned")
-        
-        # ---------- TEACHER PROFILE ----------
-        elif menu == "👤 My Profile":
-            st.title("👤 My Profile")
-            
-            col1, col2 = st.columns([1, 2])
-            
-            with col1:
-                st.subheader("Profile Picture")
-                if user.get('profile_pic'):
-                    st.image(user['profile_pic'], width=200)
-                else:
-                    st.markdown("# 👨‍🏫")
-                
-                uploaded_file = st.file_uploader("Upload Photo", type=['png', 'jpg', 'jpeg'])
-                if uploaded_file:
-                    image = Image.open(uploaded_file)
-                    buffered = BytesIO()
-                    image.save(buffered, format="PNG")
-                    img_str = base64.b64encode(buffered.getvalue()).decode()
-                    
-                    for u in users:
-                        if u['email'] == user['email']:
-                            u['profile_pic'] = f"data:image/png;base64,{img_str}"
-                            break
-                    
-                    save_school_data(school_code, "users.json", users)
-                    user['profile_pic'] = f"data:image/png;base64,{img_str}"
-                    st.success("✅ Profile picture updated!")
-                    st.rerun()
-            
-            with col2:
-                st.subheader("Edit Profile")
-                with st.form("edit_teacher_profile"):
-                    fullname = st.text_input("Full Name", value=user.get('fullname', ''))
-                    email = st.text_input("Email", value=user.get('email', ''), disabled=True)
-                    phone = st.text_input("Phone", value=user.get('phone', ''))
-                    bio = st.text_area("Bio", value=user.get('bio', ''), height=100)
-                    
-                    if st.form_submit_button("💾 Update", use_container_width=True):
-                        for u in users:
-                            if u['email'] == user['email']:
-                                u['fullname'] = fullname
-                                u['phone'] = phone
-                                u['bio'] = bio
-                                break
+                for adm in user.get('linked_students', []):
+                    student = next((u for u in users if u.get('admission_number') == adm), None)
+                    if student:
+                        st.subheader(f"👨‍🎓 {student['fullname']}")
                         
-                        save_school_data(school_code, "users.json", users)
-                        user['fullname'] = fullname
-                        user['phone'] = phone
-                        user['bio'] = bio
-                        st.success("✅ Profile updated!")
-                        st.rerun()
+                        # Classes
+                        student_classes = [c for c in classes if student['email'] in c.get('students', [])]
+                        if student_classes:
+                            st.markdown("### 📚 Enrolled Classes")
+                            for c in student_classes:
+                                with st.expander(f"{c['name']} - {c['grade']}"):
+                                    st.write(f"**Teacher:** {c.get('teacher_name', 'Unknown')}")
+                                    st.write(f"**Schedule:** {c.get('schedule', 'TBD')}")
+                        
+                        # Assignments
+                        student_assignments = [a for a in assignments if a['class'] in [c['name'] for c in student_classes]]
+                        if student_assignments:
+                            st.markdown("### 📝 Pending Assignments")
+                            for a in student_assignments:
+                                with st.container():
+                                    st.write(f"**{a['title']}** - Due: {a['due']}")
+                                    st.write(f"📝 {a.get('description', '')}")
+                                    st.divider()
+                        
+                        # Grades
+                        student_grades = [g for g in grades if g.get('student') == student['email']]
+                        if student_grades:
+                            st.markdown("### 📊 Recent Grades")
+                            for g in student_grades[-5:]:
+                                st.write(f"**{g.get('assignment_title', 'Assignment')}**: {g['grade']}")
     
-    # ----- STUDENT DASHBOARD -----
     else:
+        # ----- MANAGEMENT MODE CONTENT (Placeholder) -----
+        st.markdown(f"<h1 style='text-align: center;'>⚙️ {school['name']} Management System</h1>", unsafe_allow_html=True)
         
-        # ---------- STUDENT DASHBOARD ----------
-        if menu == "🏠 Dashboard":
-            st.title(f"👨‍🎓 Welcome, {user['fullname']}")
-            
-            my_classes = [c for c in classes if user['email'] in c.get('students', [])]
-            my_groups = [g for g in groups if user['email'] in g.get('members', [])]
-            
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("📚 My Classes", len(my_classes))
-            with col2:
-                st.metric("👥 My Groups", len(my_groups))
-            with col3:
-                upcoming = [a for a in assignments if a.get('class') in [c['name'] for c in my_classes]]
-                st.metric("📝 Assignments", len(upcoming))
-            
-            st.divider()
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.subheader("📚 My Classes")
-                if my_classes:
-                    for c in my_classes[:3]:
-                        with st.container(border=True):
-                            st.markdown(f"**{c['name']}**")
-                            st.markdown(f"Teacher: {c.get('teacher_name', c['teacher'])}")
-                else:
-                    st.info("You haven't joined any classes yet")
-            
-            with col2:
-                st.subheader("📢 Recent Announcements")
-                relevant = [a for a in announcements if a.get('target_class') in ['All Classes'] + [c['name'] for c in my_classes]][:3]
-                if relevant:
-                    for a in relevant:
-                        st.markdown(f"- **{a['title']}**")
-                else:
-                    st.info("No recent announcements")
-        
-        # ---------- STUDENT ANNOUNCEMENTS ----------
-        elif menu == "📢 Announcements":
-            st.title("📢 Announcements")
-            
-            my_classes = [c['name'] for c in classes if user['email'] in c.get('students', [])]
-            relevant = [a for a in announcements if a.get('target_class') in ['All Classes'] + my_classes]
-            
-            if relevant:
-                for a in reversed(relevant[-20:]):
-                    with st.container(border=True):
-                        col1, col2 = st.columns([3, 1])
-                        with col1:
-                            st.markdown(f"**{a['title']}**" + (" ⭐" if a.get('important') else ""))
-                            st.markdown(a['content'])
-                        with col2:
-                            st.caption(f"By: {a['author']}")
-                            st.caption(a['date'][:16])
-            else:
-                st.info("No announcements")
-        
-        # ---------- BROWSE CLASSES ----------
-        elif menu == "📚 Browse Classes":
-            st.title("📚 Browse Available Classes")
-            
-            my_classes = [c['name'] for c in classes if user['email'] in c.get('students', [])]
-            available = [c for c in classes if user['email'] not in c.get('students', []) and len(c.get('students', [])) < c.get('max_students', 30)]
-            
-            if available:
-                st.subheader(f"Available Classes ({len(available)})")
+        if user['role'] == 'admin':
+            if menu == "Analytics":
+                st.markdown("### 📊 School Analytics")
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("Total Students", school['stats'].get('students', 0), "+12%")
+                with col2:
+                    st.metric("Avg. Performance", "78%", "+5%")
+                with col3:
+                    st.metric("Attendance Rate", "92%", "-2%")
+                with col4:
+                    st.metric("Retention Rate", "95%", "+3%")
                 
-                for c in available:
-                    with st.container(border=True):
-                        col1, col2 = st.columns([3, 1])
-                        with col1:
-                            st.markdown(f"**{c['name']}**")
-                            st.markdown(f"Teacher: {c.get('teacher_name', c['teacher'])}")
-                            st.markdown(f"Schedule: {c.get('schedule', 'TBD')}")
-                            st.markdown(f"Students: {len(c.get('students', []))}/{c.get('max_students', 30)}")
-                        with col2:
-                            if st.button("📝 Request to Join", key=f"req_class_{c['code']}"):
-                                # Create join request
-                                request = {
-                                    "id": generate_id("REQ"),
-                                    "student_email": user['email'],
-                                    "student_name": user['fullname'],
-                                    "class_name": c['name'],
-                                    "class_code": c['code'],
-                                    "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                                    "status": "pending"
-                                }
-                                class_requests.append(request)
-                                save_school_data(school_code, "class_requests.json", class_requests)
-                                st.success("✅ Request sent to teacher!")
-                                st.rerun()
-            else:
-                st.info("No available classes to join")
+                st.divider()
+                st.markdown("### 📈 Performance Trends")
+                st.line_chart({"Math": [65, 68, 72, 75, 78], "Science": [70, 72, 75, 73, 80], "English": [80, 82, 85, 83, 88]})
             
-            st.divider()
-            st.subheader("📋 My Classes")
-            if my_classes:
-                for c in my_classes:
-                    with st.container(border=True):
-                        st.markdown(f"**{c}** - Enrolled")
-            else:
-                st.info("You haven't joined any classes yet")
-        
-        # ---------- BROWSE GROUPS ----------
-        elif menu == "👥 Browse Groups":
-            st.title("👥 Browse Available Groups")
-            
-            my_groups = [g['name'] for g in groups if user['email'] in g.get('members', [])]
-            available = [g for g in groups if user['email'] not in g.get('members', []) and len(g.get('members', [])) < g.get('max_members', 10)]
-            
-            if available:
-                st.subheader(f"Available Groups ({len(available)})")
+            elif menu == "Finance":
+                st.markdown("### 💰 Financial Overview")
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Total Fees Collected", "KSh 2.5M", "+15%")
+                with col2:
+                    st.metric("Pending Fees", "KSh 450K", "-8%")
+                with col3:
+                    st.metric("Expenses", "KSh 1.8M", "+10%")
                 
-                for g in available:
-                    with st.container(border=True):
-                        col1, col2 = st.columns([3, 1])
+                st.divider()
+                st.markdown("### 📋 Recent Transactions")
+                transactions = [
+                    {"date": "2024-01-15", "student": "John Doe", "amount": "KSh 45,000", "status": "Paid"},
+                    {"date": "2024-01-14", "student": "Jane Smith", "amount": "KSh 45,000", "status": "Paid"},
+                    {"date": "2024-01-13", "student": "Bob Johnson", "amount": "KSh 22,500", "status": "Partial"},
+                ]
+                for t in transactions:
+                    st.write(f"**{t['date']}** - {t['student']} - {t['amount']} - {t['status']}")
+            
+            elif menu == "Staff":
+                st.markdown("### 👥 Staff Management")
+                staff = [
+                    {"name": "Dr. Sarah Kimani", "role": "Principal", "department": "Administration", "status": "Active"},
+                    {"name": "Mr. John Omondi", "role": "Deputy Principal", "department": "Administration", "status": "Active"},
+                    {"name": "Ms. Lucy Wanjiku", "role": "HOD Science", "department": "Science", "status": "Active"},
+                ]
+                for s in staff:
+                    with st.container():
+                        col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
                         with col1:
-                            st.markdown(f"**{g['name']}**")
-                            st.markdown(f"Leader: {g.get('leader_name', 'Unknown')}")
-                            st.markdown(f"Class: {g.get('class', 'General')}")
-                            st.markdown(f"Members: {len(g.get('members', []))}/{g.get('max_members', 10)}")
+                            st.write(f"**{s['name']}**")
                         with col2:
-                            if st.button("📝 Request to Join", key=f"req_group_{g['code']}"):
-                                request = {
-                                    "id": generate_id("REQ"),
-                                    "student_email": user['email'],
-                                    "student_name": user['fullname'],
-                                    "group_name": g['name'],
-                                    "group_code": g['code'],
-                                    "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-                                    "status": "pending"
-                                }
-                                group_requests.append(request)
-                                save_school_data(school_code, "group_requests.json", group_requests)
-                                st.success("✅ Request sent to group leader!")
-                                st.rerun()
-            else:
-                st.info("No available groups to join")
+                            st.write(s['role'])
+                        with col3:
+                            st.write(s['department'])
+                        with col4:
+                            st.write(f"✅ {s['status']}")
+                        st.divider()
             
-            st.divider()
-            st.subheader("👥 My Groups")
-            if my_groups:
-                for g in my_groups:
-                    with st.container(border=True):
-                        st.markdown(f"**{g}** - Member")
-            else:
-                st.info("You haven't joined any groups yet")
+            elif menu == "Curriculum":
+                st.markdown("### 📚 Curriculum Planning")
+                st.info("Curriculum planning module coming soon!")
+            
+            elif menu == "Exams":
+                st.markdown("### 📝 Examination Management")
+                st.info("Examination module coming soon!")
+            
+            elif menu == "Inventory":
+                st.markdown("### 📦 Inventory Management")
+                st.info("Inventory module coming soon!")
+            
+            elif menu == "Reports":
+                st.markdown("### 📊 Report Generation")
+                st.info("Reports module coming soon!")
+            
+            elif menu == "Settings":
+                st.markdown("### ⚙️ System Settings")
+                st.info("Settings module coming soon!")
         
-        # ---------- HOMEWORK ----------
-        elif menu == "📝 My Homework":
-            st.title("📝 My Homework")
-            
-            my_classes = [c['name'] for c in classes if user['email'] in c.get('students', [])]
-            my_assignments = [a for a in assignments if a.get('class') in my_classes]
-            
-            if my_assignments:
-                for a in my_assignments:
-                    with st.container(border=True):
-                        col1, col2 = st.columns([3, 1])
-                        with col1:
-                            st.markdown(f"**{a['title']}**")
-                            st.markdown(f"Class: {a['class']}")
-                            st.markdown(f"Description: {a.get('description', 'No description')}")
-                        with col2:
-                            st.markdown(f"📅 Due: {a['due']}")
-                            st.markdown(f"📊 Points: {a.get('points', 100)}")
-                            if st.button("✓ Mark Complete", key=f"hw_{a['code']}"):
-                                st.success("Good job!")
-            else:
-                st.info("No homework assigned")
+        elif user['role'] == 'teacher':
+            if menu == "My Classes":
+                st.markdown("### 📚 My Classes")
+                st.info("Class management module coming soon!")
+            elif menu == "Gradebook":
+                st.markdown("### 📊 Gradebook")
+                st.info("Gradebook module coming soon!")
+            elif menu == "Attendance":
+                st.markdown("### 📋 Attendance")
+                st.info("Attendance module coming soon!")
+            elif menu == "Lesson Plans":
+                st.markdown("### 📝 Lesson Plans")
+                st.info("Lesson plans module coming soon!")
+            elif menu == "Reports":
+                st.markdown("### 📊 Reports")
+                st.info("Reports module coming soon!")
+            elif menu == "Settings":
+                st.markdown("### ⚙️ Settings")
+                st.info("Settings module coming soon!")
         
-        # ---------- STUDY MATERIALS ----------
-        elif menu == "📎 Study Materials":
-            st.title("📎 Study Materials")
-            
-            my_classes = [c['name'] for c in classes if user['email'] in c.get('students', [])]
-            my_resources = [r for r in resources if r.get('class') in my_classes]
-            
-            if my_resources:
-                for r in my_resources:
-                    with st.container(border=True):
-                        st.markdown(f"**{r['title']}**")
-                        st.markdown(f"Class: {r['class']} | Type: {r['type']}")
-                        st.markdown(r.get('description', ''))
-                        st.caption(f"Uploaded by: {r.get('teacher', 'Unknown')} on {r['date']}")
-                        st.button("📥 Download", key=f"dl_{r['id']}")
-            else:
-                st.info("No study materials available")
+        elif user['role'] == 'student':
+            if menu == "My Grades":
+                st.markdown("### 📊 My Grades")
+                st.info("Grades module coming soon!")
+            elif menu == "Attendance":
+                st.markdown("### 📋 My Attendance")
+                st.info("Attendance module coming soon!")
+            elif menu == "Timetable":
+                st.markdown("### 📅 Timetable")
+                st.info("Timetable module coming soon!")
+            elif menu == "Fee Statement":
+                st.markdown("### 💰 Fee Statement")
+                st.info("Fee statement module coming soon!")
+            elif menu == "Settings":
+                st.markdown("### ⚙️ Settings")
+                st.info("Settings module coming soon!")
         
-        # ---------- DISCUSSION BOARD ----------
-        elif menu == "💬 Discussion Board":
-            st.title("💬 Discussion Board")
-            
-            if discussions:
-                for d in reversed(discussions[-10:]):
-                    with st.expander(f"💭 {d['topic']}"):
-                        st.markdown(f"**{d['author']}** ({d['author_role']}) - {d['date']}")
-                        st.markdown(d['message'])
-                        
-                        st.markdown("---")
-                        reply = st.text_input("Write a reply...", key=f"reply_{d['id']}")
-                        if st.button("Post Reply", key=f"reply_btn_{d['id']}"):
-                            st.success("Reply posted!")
-            else:
-                st.info("No discussions yet")
-        
-        # ---------- MY GRADES ----------
-        elif menu == "📊 My Grades":
-            st.title("📊 My Grades")
-            
-            my_classes = [c['name'] for c in classes if user['email'] in c.get('students', [])]
-            my_grades = [g for g in grades if g.get('student') == user['email']]
-            
-            if my_grades:
-                for c in my_classes:
-                    class_grades = [g for g in my_grades if g.get('class') == c]
-                    if class_grades:
-                        with st.expander(f"📖 {c}"):
-                            for g in class_grades:
-                                st.markdown(f"**{g.get('assignment_title', 'Assignment')}**: {g['grade']}")
-            else:
-                st.info("No grades available yet")
-        
-        # ---------- STUDENT PROFILE ----------
-        elif menu == "👤 My Profile":
-            st.title("👤 My Profile")
-            
-            col1, col2 = st.columns([1, 2])
-            
-            with col1:
-                st.subheader("Profile Picture")
-                if user.get('profile_pic'):
-                    st.image(user['profile_pic'], width=200)
-                else:
-                    st.markdown("# 👨‍🎓")
-                
-                uploaded_file = st.file_uploader("Upload Photo", type=['png', 'jpg', 'jpeg'])
-                if uploaded_file:
-                    image = Image.open(uploaded_file)
-                    buffered = BytesIO()
-                    image.save(buffered, format="PNG")
-                    img_str = base64.b64encode(buffered.getvalue()).decode()
-                    
-                    for u in users:
-                        if u['email'] == user['email']:
-                            u['profile_pic'] = f"data:image/png;base64,{img_str}"
-                            break
-                    
-                    save_school_data(school_code, "users.json", users)
-                    user['profile_pic'] = f"data:image/png;base64,{img_str}"
-                    st.success("✅ Profile picture updated!")
-                    st.rerun()
-            
-            with col2:
-                st.subheader("Edit Profile")
-                with st.form("edit_student_profile"):
-                    fullname = st.text_input("Full Name", value=user.get('fullname', ''))
-                    email = st.text_input("Email", value=user.get('email', ''), disabled=True)
-                    phone = st.text_input("Phone", value=user.get('phone', ''))
-                    bio = st.text_area("Bio", value=user.get('bio', ''), height=100)
-                    
-                    if st.form_submit_button("💾 Update", use_container_width=True):
-                        for u in users:
-                            if u['email'] == user['email']:
-                                u['fullname'] = fullname
-                                u['phone'] = phone
-                                u['bio'] = bio
-                                break
-                        
-                        save_school_data(school_code, "users.json", users)
-                        user['fullname'] = fullname
-                        user['phone'] = phone
-                        user['bio'] = bio
-                        st.success("✅ Profile updated!")
-                        st.rerun()
+        elif user['role'] == 'guardian':
+            if menu == "Student Progress":
+                st.markdown("### 📈 Student Progress")
+                st.info("Student progress module coming soon!")
+            elif menu == "Fee Payments":
+                st.markdown("### 💰 Fee Payments")
+                st.info("Fee payments module coming soon!")
+            elif menu == "Reports":
+                st.markdown("### 📊 Reports")
+                st.info("Reports module coming soon!")
+            elif menu == "Communications":
+                st.markdown("### 💬 Communications")
+                st.info("Communications module coming soon!")
+            elif menu == "Settings":
+                st.markdown("### ⚙️ Settings")
+                st.info("Settings module coming soon!")
 
-# ----- FALLBACK -----
 else:
-    st.error("Something went wrong. Please refresh the page.")
-    if st.button("Start Over"):
-        st.session_state.school = None
-        st.session_state.user = None
+    st.error("Something went wrong. Please restart.")
+    if st.button("🔄 Restart"):
         st.session_state.page = 'welcome'
         st.rerun()
