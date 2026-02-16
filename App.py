@@ -9,9 +9,6 @@ from PIL import Image
 import base64
 from io import BytesIO
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from datetime import date
 
 # ============ PAGE CONFIG ============
 st.set_page_config(
@@ -768,6 +765,8 @@ if 'current_teacher_class' not in st.session_state:
     st.session_state.current_teacher_class = []
 if 'current_teacher_class_name' not in st.session_state:
     st.session_state.current_teacher_class_name = ""
+if 'teacher_allocation_mode' not in st.session_state:
+    st.session_state.teacher_allocation_mode = False
 
 # ============ TOP NAVIGATION ============
 col1, col2, col3 = st.columns([1, 2, 1])
@@ -1930,7 +1929,7 @@ elif st.session_state.page == 'dashboard' and st.session_state.current_school an
                                 st.write(f"**{g.get('assignment_title', 'Assignment')}**: {g['grade']}")
     
     else:
-        # ----- MANAGEMENT MODE CONTENT (Fully Implemented) -----
+        # ----- MANAGEMENT MODE CONTENT (Fully Implemented with fallback to tables) -----
         st.markdown(f"<h1 style='text-align: center;'>⚙️ {school['name']} Management System</h1>", unsafe_allow_html=True)
         
         if user['role'] == 'admin':
@@ -1954,22 +1953,21 @@ elif st.session_state.page == 'dashboard' and st.session_state.current_school an
                 
                 st.divider()
                 
-                # Charts
+                # Data tables instead of charts
                 col1, col2 = st.columns(2)
                 with col1:
                     st.markdown("#### 📈 Performance by Subject")
                     subjects = ["Math", "Science", "English", "Kiswahili", "Social Studies"]
                     scores = [78, 82, 85, 80, 75]
-                    fig = px.bar(x=subjects, y=scores, labels={'x': 'Subject', 'y': 'Average Score (%)'}, 
-                                 color=scores, color_continuous_scale='viridis')
-                    st.plotly_chart(fig, use_container_width=True)
+                    data = pd.DataFrame({"Subject": subjects, "Average Score": scores})
+                    st.dataframe(data, use_container_width=True)
                 
                 with col2:
                     st.markdown("#### 📊 Enrollment by Grade")
                     grades = ["Grade 1-3", "Grade 4-6", "Grade 7-9", "Form 1-2", "Form 3-4"]
                     enrollment = [120, 145, 110, 95, 80]
-                    fig = px.pie(values=enrollment, names=grades, title="Student Distribution")
-                    st.plotly_chart(fig, use_container_width=True)
+                    data = pd.DataFrame({"Grade": grades, "Enrollment": enrollment})
+                    st.dataframe(data, use_container_width=True)
                 
                 st.divider()
                 
@@ -2101,34 +2099,35 @@ elif st.session_state.page == 'dashboard' and st.session_state.current_school an
                             if st.form_submit_button("📥 Borrow Book", use_container_width=True):
                                 if available_books and st.session_state.library_members:
                                     # Find selected member and book
-                                    member_idx = member_options.index(selected_member)
-                                    book_idx = book_options.index(selected_book)
+                                    member_idx = member_options.index(selected_member) if selected_member != "No members available" else -1
+                                    book_idx = book_options.index(selected_book) if selected_book != "No books available" else -1
                                     
-                                    member = st.session_state.library_members[member_idx]
-                                    book = available_books[book_idx]
-                                    
-                                    # Update book availability
-                                    book['available'] -= 1
-                                    
-                                    # Create borrow record
-                                    borrow_record = {
-                                        "id": generate_id("BRW"),
-                                        "member_id": member['id'],
-                                        "member_name": member['name'],
-                                        "book_id": book['id'],
-                                        "book_title": book['title'],
-                                        "borrow_date": borrow_date.strftime("%Y-%m-%d"),
-                                        "return_due_date": return_date.strftime("%Y-%m-%d"),
-                                        "returned": False,
-                                        "returned_date": None
-                                    }
-                                    st.session_state.borrowed_books.append(borrow_record)
-                                    
-                                    # Update member's borrowed count
-                                    member['books_borrowed'] += 1
-                                    
-                                    st.success(f"Book '{book['title']}' borrowed by {member['name']}")
-                                    st.rerun()
+                                    if member_idx >= 0 and book_idx >= 0:
+                                        member = st.session_state.library_members[member_idx]
+                                        book = available_books[book_idx]
+                                        
+                                        # Update book availability
+                                        book['available'] -= 1
+                                        
+                                        # Create borrow record
+                                        borrow_record = {
+                                            "id": generate_id("BRW"),
+                                            "member_id": member['id'],
+                                            "member_name": member['name'],
+                                            "book_id": book['id'],
+                                            "book_title": book['title'],
+                                            "borrow_date": borrow_date.strftime("%Y-%m-%d"),
+                                            "return_due_date": return_date.strftime("%Y-%m-%d"),
+                                            "returned": False,
+                                            "returned_date": None
+                                        }
+                                        st.session_state.borrowed_books.append(borrow_record)
+                                        
+                                        # Update member's borrowed count
+                                        member['books_borrowed'] += 1
+                                        
+                                        st.success(f"Book '{book['title']}' borrowed by {member['name']}")
+                                        st.rerun()
                     
                     with col2:
                         st.markdown("#### ↩️ Return a Book")
@@ -2233,9 +2232,9 @@ elif st.session_state.page == 'dashboard' and st.session_state.current_school an
                         df = pd.DataFrame(reminders)
                         # Color code based on urgency
                         def color_status(val):
-                            if "OVERDUE" in val:
+                            if "OVERDUE" in str(val):
                                 return 'color: red; font-weight: bold'
-                            elif "Due in 0" in val or "Due in 1" in val or "Due in 2" in val:
+                            elif "Due in 0" in str(val) or "Due in 1" in str(val) or "Due in 2" in str(val):
                                 return 'color: orange; font-weight: bold'
                             return ''
                         
@@ -2263,9 +2262,7 @@ elif st.session_state.page == 'dashboard' and st.session_state.current_school an
                             
                             book_df = pd.DataFrame(list(book_counts.items()), columns=['Book', 'Times Borrowed'])
                             book_df = book_df.sort_values('Times Borrowed', ascending=False).head(5)
-                            
-                            fig = px.bar(book_df, x='Book', y='Times Borrowed', title="Top 5 Most Borrowed Books")
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.dataframe(book_df, use_container_width=True)
                     
                     with col2:
                         # Active members
@@ -2276,9 +2273,7 @@ elif st.session_state.page == 'dashboard' and st.session_state.current_school an
                             if member_data:
                                 member_df = pd.DataFrame(member_data)
                                 member_df = member_df.sort_values('Books Borrowed', ascending=False).head(5)
-                                
-                                fig = px.bar(member_df, x='Member', y='Books Borrowed', title="Top 5 Most Active Members")
-                                st.plotly_chart(fig, use_container_width=True)
+                                st.dataframe(member_df, use_container_width=True)
                             else:
                                 st.info("No borrowing activity yet.")
             
@@ -2452,8 +2447,7 @@ elif st.session_state.page == 'dashboard' and st.session_state.current_school an
                                 type_counts[item['type']] = type_counts.get(item['type'], 0) + item['quantity']
                             
                             type_df = pd.DataFrame(list(type_counts.items()), columns=['Type', 'Total Quantity'])
-                            fig = px.pie(type_df, values='Total Quantity', names='Type', title="Inventory Distribution by Type")
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.dataframe(type_df, use_container_width=True)
                     
                     with col2:
                         # Most allocated items
@@ -2465,9 +2459,7 @@ elif st.session_state.page == 'dashboard' and st.session_state.current_school an
                             
                             item_df = pd.DataFrame(list(item_counts.items()), columns=['Item', 'Times Allocated'])
                             item_df = item_df.sort_values('Times Allocated', ascending=False).head(5)
-                            
-                            fig = px.bar(item_df, x='Item', y='Times Allocated', title="Top 5 Most Allocated Items")
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.dataframe(item_df, use_container_width=True)
             
             elif menu == "Teacher Books":
                 st.markdown("### 👨‍🏫 Teacher Book Allocation")
@@ -2520,7 +2512,7 @@ elif st.session_state.page == 'dashboard' and st.session_state.current_school an
                                 st.warning("No books available for allocation.")
                         
                         with col2:
-                            if 'teacher_allocation_mode' in st.session_state and st.session_state.teacher_allocation_mode:
+                            if st.session_state.teacher_allocation_mode:
                                 st.markdown("##### Select Students")
                                 
                                 # Create checkboxes for each student
@@ -2622,8 +2614,7 @@ elif st.session_state.page == 'dashboard' and st.session_state.current_school an
                         
                         if book_counts:
                             book_df = pd.DataFrame(list(book_counts.items()), columns=['Book', 'Times Allocated'])
-                            fig = px.bar(book_df, x='Book', y='Times Allocated', title="Books Allocated to Classes")
-                            st.plotly_chart(fig, use_container_width=True)
+                            st.dataframe(book_df, use_container_width=True)
                     else:
                         st.info("No data available for reports.")
             
